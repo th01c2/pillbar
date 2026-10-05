@@ -93,6 +93,10 @@ struct Config {
   Color text = rgb(0xe6e6e6);
   Color dim = rgb(0xb8b8b8);
   Color ws_occupied = rgb(0x4a4a4e);
+  // Empty workspaces: the same grey as occupied but faded, so they read as
+  // "available" without competing with the ones holding windows. Drop the alpha
+  // further for a subtler look, raise it towards 1.0 to make them louder.
+  Color ws_empty = rgb(0x4a4a4e, 0.45);
   // Active workspace: a clearly distinct, soft periwinkle accent so it is easy
   // to spot (the reference #55555a was nearly identical to the occupied fill).
   Color ws_focused = rgb(0x6f7fd8);

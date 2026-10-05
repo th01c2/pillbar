@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <string>
 
+#include "app/logging.hpp"
 #include "render/glyphs.hpp"
 
 namespace pillbar {
@@ -134,15 +136,40 @@ Item item_of(const std::string& name) {
   return Item::None;
 }
 
-int workspace_count(const Config& config, const AppState& state) {
-  (void)config;
-  // Only workspaces that hold windows, plus the one currently focused, so the
-  // item grows and shrinks with the number of workspaces actually in use.
-  int count = 0;
-  for (const WorkspaceState& ws : state.workspaces.list) {
-    if (ws.occupied || ws.focused) ++count;
+// One rendered workspace numeral: its id plus the index into
+// AppState::workspaces.list (-1 when nothing is known about it).
+struct WorkspaceDisplay {
+  int id = 0;
+  int state_index = -1;
+};
+
+// The numerals to draw: ids 1..min_workspaces always (5 by default), plus any
+// higher-numbered workspace that actually exists or is focused. Opening
+// workspace 7 therefore adds "7" without dragging 6 along, and the gaps stay
+// hidden.
+std::vector<WorkspaceDisplay> display_workspaces(const Config& config, const AppState& state) {
+  const int base = config.min_workspaces > 0 ? config.min_workspaces : 5;
+  std::vector<WorkspaceDisplay> out;
+  out.reserve(static_cast<std::size_t>(base) + state.workspaces.list.size());
+  for (int id = 1; id <= base; ++id) {
+    int index = -1;
+    for (std::size_t i = 0; i < state.workspaces.list.size(); ++i) {
+      if (state.workspaces.list[i].id == id) {
+        index = static_cast<int>(i);
+        break;
+      }
+    }
+    out.push_back(WorkspaceDisplay{id, index});
   }
-  return count;
+  for (std::size_t i = 0; i < state.workspaces.list.size(); ++i) {
+    const WorkspaceState& ws = state.workspaces.list[i];
+    if (ws.id > base && (ws.occupied || ws.focused)) {
+      out.push_back(WorkspaceDisplay{ws.id, static_cast<int>(i)});
+    }
+  }
+  std::sort(out.begin(), out.end(),
+            [](const WorkspaceDisplay& a, const WorkspaceDisplay& b) { return a.id < b.id; });
+  return out;
 }
 
 std::string window_name_text(const WindowState& window) {
@@ -179,8 +206,8 @@ double item_width(const Renderer& renderer, const Config& config, const AppState
       if (!state.bluetooth.present) return -1.0;
       return config.height_px * 0.5;
     case Item::Workspaces: {
-      const int count = workspace_count(config, state);
-      if (count <= 0) return -1.0;
+      const std::size_t count = display_workspaces(config, state).size();
+      if (count == 0) return -1.0;
       const double diameter = std::min(20.0, config.height_px * 0.62);
       return static_cast<double>(count) * diameter * 1.35;
     }
@@ -289,25 +316,25 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
   std::size_t index = 0;
   for (const ItemBox& box : layout.items) {
     if (box.item != Item::Workspaces) continue;
-    const int count = workspace_count(config, state);
+    const std::vector<WorkspaceDisplay> slots = display_workspaces(config, state);
+    const int count = static_cast<int>(slots.size());
     if (count <= 0) continue;
     const double diameter =
         std::min(20.0, std::min(static_cast<double>(box.rect.w) / count * 1.1,
                                 config.height_px * 0.62));
-    int shown = 0;
-    for (std::size_t state_index = 0; state_index < state.workspaces.list.size(); ++state_index) {
-      const WorkspaceState& ws = state.workspaces.list[state_index];
-      if (!ws.occupied && !ws.focused) continue;
+    for (int i = 0; i < count; ++i) {
       WorkspaceSlot slot;
       slot.cx = static_cast<double>(box.rect.x) +
-                (static_cast<double>(shown) + 0.5) * static_cast<double>(box.rect.w) / count;
+                (static_cast<double>(i) + 0.5) * static_cast<double>(box.rect.w) / count;
       slot.cy = center_y;
       slot.diameter = std::max(1.0, diameter);
-      slot.id = ws.id;
-      slot.state_index = static_cast<int>(state_index);
-      if (ws.focused) layout.workspace_focused_index = static_cast<int>(index);
+      slot.id = slots[static_cast<std::size_t>(i)].id;
+      slot.state_index = slots[static_cast<std::size_t>(i)].state_index;
+      if (slot.state_index >= 0 &&
+          state.workspaces.list[static_cast<std::size_t>(slot.state_index)].focused) {
+        layout.workspace_focused_index = i;
+      }
       layout.workspace_slots.push_back(slot);
-      ++shown;
     }
     index = layout.workspace_slots.size();
   }
@@ -497,6 +524,9 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
             text_.draw_center(cr, slot.cx, slot.cy, std::to_string(id),
                               focused ? config_->ws_focused_text : config_->text);
           } else {
+            set_color(cr, config_->ws_empty);
+            cairo_arc(cr, slot.cx, slot.cy, slot.diameter / 2.0, 0, 2.0 * kPi);
+            cairo_fill(cr);
             text_.draw_center(cr, slot.cx, slot.cy, std::to_string(id), config_->dim);
           }
         }
