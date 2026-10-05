@@ -561,8 +561,11 @@ void App::show_tooltip(Bar& bar) {
   tooltip_bar_ = &bar;
 
   const bool system = bar.hover == Item::Clock || bar.hover == Item::Cpu || bar.hover == Item::Gpu;
-  tooltip_uses_seconds_ = system;
-  if (system && tooltip_seconds_timer_.valid()) tooltip_seconds_timer_.arm_relative_ms(1000, true);
+  // Wi-Fi re-reads interface counters so the tooltip's up/down rates stay live.
+  tooltip_uses_seconds_ = system || bar.hover == Item::Wifi;
+  if (tooltip_uses_seconds_ && tooltip_seconds_timer_.valid()) {
+    tooltip_seconds_timer_.arm_relative_ms(1000, true);
+  }
   if (cpu_) cpu_->set_hovered(bar.hover == Item::Clock || bar.hover == Item::Cpu);
   if (gpu_) gpu_->set_hovered(bar.hover == Item::Clock || bar.hover == Item::Gpu);
   update_tooltip(bar);

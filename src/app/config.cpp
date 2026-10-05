@@ -62,9 +62,9 @@ void config_apply_default_slots(Config& config) {
   // fit while keeping the reference look; see README "Layout assumption".
   config.slots["battery"] = ItemSlot{true, 0.055, 0.155};
   config.slots["volume"] = ItemSlot{true, 0.185, 0.285};
-  config.slots["wifi"] = ItemSlot{true, 0.318, 0.340};
-  config.slots["bluetooth"] = ItemSlot{true, 0.350, 0.372};
-  config.slots["workspaces"] = ItemSlot{true, 0.400, 0.700};
+  config.slots["wifi"] = ItemSlot{true, 0.330, 0.352};
+  config.slots["bluetooth"] = ItemSlot{true, 0.358, 0.380};
+  config.slots["workspaces"] = ItemSlot{true, 0.386, 0.700};
   config.slots["window"] = ItemSlot{true, 0.730, 0.845};
   config.slots["clock"] = ItemSlot{true, 0.875, 0.960};
 }

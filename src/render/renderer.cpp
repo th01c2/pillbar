@@ -41,7 +41,10 @@ std::string format_clock(const ClockState& clock) {
   return buffer;
 }
 
-int battery_icon_index(int percent) { return std::clamp((percent + 5) / 10, 0, 10); }
+// 10%..100% maps to index 0..9; anything below 10% shows the 10% icon.
+int battery_icon_index(int percent) {
+  return std::clamp((percent + 5) / 10, 1, 10) - 1;
+}
 
 std::string battery_icon(const Config& config, const BatteryState& battery) {
   const bool charging = battery.charging || battery.full;
@@ -62,6 +65,8 @@ std::string volume_icon(const Config& config, const VolumeState& volume) {
 }
 
 std::string wifi_icon(const Config& config, const WifiState& wifi) {
+  // Wired wins when both are up.
+  if (wifi.wired) return config.wifi_wired;
   if (!wifi.connected) return config.wifi_off;
   if (config.wifi_levels.empty()) return config.wifi_off;
   const int level = std::clamp((wifi.signal + 12) / 25, 1,
@@ -196,7 +201,8 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       case Item::Wifi: {
         if (!state.wifi.present) break;
         const std::string glyph = wifi_icon(*config_, state.wifi);
-        const Color icon_color = state.wifi.connected ? config_->text : config_->dim;
+        const Color icon_color =
+            (state.wifi.wired || state.wifi.connected) ? config_->text : config_->dim;
         icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, glyph, icon_color);
         break;
       }

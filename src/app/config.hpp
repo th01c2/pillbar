@@ -46,14 +46,14 @@ struct Config {
   double letter_spacing = 0.05;  // +5%
 
   // --- nerd font icons ---
-  // Battery level icons for 0%,10%,...,100% (index 0..10).
+  // Battery icons for 10%,20%,...,100% (index 0..9).
   std::vector<std::string> battery_levels{
-      "\U000F0083", "\U000F007A", "\U000F007B", "\U000F007C", "\U000F007D", "\U000F007E",
+      "\U000F007A", "\U000F007B", "\U000F007C", "\U000F007D", "\U000F007E",
       "\U000F007F", "\U000F0080", "\U000F0081", "\U000F0082", "\U000F0079"};
-  // Charging battery icons for 0%,10%,...,100% (index 0..10).
+  // Charging battery icons for 10%,20%,...,100% (index 0..9).
   std::vector<std::string> battery_charging{
-      "\U000F0085", "\U000F089C", "\U000F0086", "\U000F0087", "\U000F0088", "\U000F089D",
-      "\U000F0089", "\U000F089E", "\U000F008A", "\U000F008B", "\U000F12A4"};
+      "\U000F089C", "\U000F0086", "\U000F0087", "\U000F0088", "\U000F089D",
+      "\U000F0089", "\U000F089E", "\U000F008A", "\U000F008B", "\U000F0085"};
   std::string volume_muted = "\uEEE8";
   std::string volume_low = "\uF027";
   std::string volume_medium = "\uEFCF";

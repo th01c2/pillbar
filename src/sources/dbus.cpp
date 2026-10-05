@@ -112,6 +112,27 @@ bool DbusBus::get_property_string(const char* destination, const char* path, con
   return true;
 }
 
+bool DbusBus::get_property_object_path(const char* destination, const char* path,
+                                       const char* interface, const char* member,
+                                       std::string* out) {
+  if (bus_ == nullptr) return false;
+  sd_bus_error error{};
+  sd_bus_message* reply = nullptr;
+  const int rc =
+      sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "o");
+  if (rc < 0) {
+    sd_bus_error_free(&error);
+    return false;
+  }
+  const char* value = nullptr;
+  if (sd_bus_message_read(reply, "o", &value) >= 0 && value != nullptr) {
+    *out = value;
+  }
+  sd_bus_message_unref(reply);
+  sd_bus_error_free(&error);
+  return true;
+}
+
 bool DbusBus::get_property_bool(const char* destination, const char* path, const char* interface,
                                 const char* member, bool* out) {
   if (bus_ == nullptr) return false;

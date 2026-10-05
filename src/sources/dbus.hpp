@@ -33,6 +33,8 @@ class DbusBus {
   // Property getters (synchronous, cached by sd-bus).
   bool get_property_string(const char* destination, const char* path, const char* interface,
                            const char* member, std::string* out);
+  bool get_property_object_path(const char* destination, const char* path, const char* interface,
+                                const char* member, std::string* out);
   bool get_property_bool(const char* destination, const char* path, const char* interface,
                          const char* member, bool* out);
   bool get_property_int(const char* destination, const char* path, const char* interface,

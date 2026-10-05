@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,7 @@ class WifiSource : public Source {
  private:
   static int on_signal(sd_bus_message* message, void* userdata, sd_bus_error* error);
   void rescan();
+  void sample_rates() const;
 
   AppState& state_;
   NotifyFn notify_;
@@ -34,6 +36,11 @@ class WifiSource : public Source {
   std::string device_path_;
   std::string ap_path_;
   std::string ifname_;
+  mutable long long last_rx_bytes_ = -1;
+  mutable long long last_tx_bytes_ = -1;
+  mutable std::chrono::steady_clock::time_point last_rate_time_;
+  mutable double rx_rate_bps_ = 0.0;
+  mutable double tx_rate_bps_ = 0.0;
 };
 
 }  // namespace pillbar

@@ -35,10 +35,10 @@ size_px = 12.0
 letter_spacing = 0.05
 
 [icons]
-# Battery icons for 0,10,20,...,100 percent.
-battery = ["󰂃", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
-# Charging battery icons for 0,10,20,...,100 percent.
-battery_charging = ["󰂅", "󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󱊤"]
+# Battery icons for 10,20,...,100 percent.
+battery = ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+# Charging battery icons for 10,20,...,100 percent.
+battery_charging = ["󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󰂅"]
 volume_muted = ""
 volume_low = ""
 volume_medium = ""
@@ -81,18 +81,18 @@ x1 = 0.285
 enabled = true
 
 [items.wifi]
-x0 = 0.318
-x1 = 0.340
+x0 = 0.330
+x1 = 0.352
 enabled = true
 
 [items.bluetooth]
-x0 = 0.350
-x1 = 0.372
+x0 = 0.358
+x1 = 0.380
 enabled = true
 
 [items.workspaces]
 # Numerals spread evenly across this span: 1 2 3 4 5 (+ more only if occupied).
-x0 = 0.400
+x0 = 0.386
 x1 = 0.700
 enabled = true
 

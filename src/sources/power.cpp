@@ -69,6 +69,7 @@ void PowerSource::rescan() {
   BatteryState battery;
   bool ac_online = false;
   bool found_battery = false;
+  std::string battery_status;
 
   for (const std::string& entry : sysfs::list_directory(base)) {
     const std::string dir = base + "/" + entry;
@@ -91,6 +92,7 @@ void PowerSource::rescan() {
     }
     std::string status;
     if (sysfs::read_string(dir + "/status", &status)) {
+      battery_status = status;
       battery.charging = status == "Charging";
       battery.full = status == "Full";
     }
@@ -128,6 +130,13 @@ void PowerSource::rescan() {
 
   if (!found_battery) battery.present = false;
   battery.ac_online = ac_online;
+  // Some firmware stops charging at a configured limit and reports
+  // "Not charging" while AC stays connected, and right after a fast unplug/
+  // replug the status file can still read "Discharging". Treat AC online as
+  // charging so the plugged state is always shown.
+  if (found_battery && (ac_online || battery_status == "Charging")) {
+    battery.charging = true;
+  }
 
   if (!(battery == state_.battery)) {
     state_.battery = battery;
@@ -139,7 +148,10 @@ void PowerSource::rescan() {
 void PowerSource::arm_fallback() {
   if (!fallback_.valid()) return;
   const BatteryState& battery = state_.battery;
-  const bool active = battery.present && !battery.full && (battery.charging || !battery.ac_online);
+  // Poll while discharging or charging, and also while AC is connected even if
+  // the battery reports full (charge limit), so a fast unplug/replug or a
+  // status blip is corrected without waiting for another udev event.
+  const bool active = battery.present && (!battery.full || battery.ac_online);
   if (!active) {
     fallback_.disarm();
     return;
@@ -149,4 +161,3 @@ void PowerSource::arm_fallback() {
 }
 
 }  // namespace pillbar
-

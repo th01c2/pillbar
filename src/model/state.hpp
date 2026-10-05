@@ -55,10 +55,12 @@ struct VolumeState {
 struct WifiState {
   bool present = false;
   bool connected = false;
+  bool wired = false;  // an ethernet device is up/configured
   bool enabled = true;
   int signal = 0;  // 0..100
   std::string ssid;
   std::string ifname;
+  std::string wired_ifname;
   std::string band;
   int freq = 0;  // MHz
   int rate = 0;  // kbit/s
