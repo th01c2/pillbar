@@ -66,6 +66,13 @@ void LayerSurface::set_input_none() {
   wl_region_destroy(region);
 }
 
+void LayerSurface::set_input_rect(int x, int y, int width, int height) {
+  wl_region* region = wl_compositor_create_region(display_.compositor());
+  wl_region_add(region, x, y, width, height);
+  wl_surface_set_input_region(surface_, region);
+  wl_region_destroy(region);
+}
+
 void LayerSurface::set_destination(int width, int height) {
   if (viewport_ == nullptr) return;
   wp_viewport_set_destination(viewport_, width, height);

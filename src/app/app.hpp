@@ -39,11 +39,14 @@ struct Bar {
   std::unique_ptr<Canvas> tooltip_canvas;
 
   BarLayout layout;
-  int bar_w = 0;
+  double pill_w = 0.0;       // animated pill width
+  double pill_target = 0.0;  // width the pill is animating toward
   int bar_h = 0;
   double scale = 1.0;
   bool configured = false;
   Item dirty = Item::All;
+  bool animating = false;
+  TimerFd anim_timer;
 
   // Hover / tooltip state.
   Item hover = Item::None;
@@ -78,6 +81,8 @@ class App {
   void on_state_change(Item items);
   void redraw_bar(Bar& bar, Item items);
   void redraw_all();
+  void update_target_width(Bar& bar);
+  void on_anim_tick(Bar& bar);
   void update_tooltip(Bar& bar);
   void show_tooltip(Bar& bar);
   void hide_tooltip(Bar& bar);
@@ -98,7 +103,6 @@ class App {
   EventLoop loop_;
   WaylandDisplay display_;
   Renderer renderer_;
-  LayoutEngine layout_engine_;
   DbusBus dbus_;
   std::unique_ptr<SourceManager> sources_;
   std::unique_ptr<HyprlandSource> hyprland_;

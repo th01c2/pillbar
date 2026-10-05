@@ -25,10 +25,6 @@ constexpr std::uint32_t kLayerOverlay = ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY;
 // configure/ack race; only the buffer content changes per hover.
 constexpr int kTooltipSurfaceHeight = 260;
 
-constexpr Item kAllItemBits[] = {
-    Item::Battery, Item::Volume,   Item::Wifi,       Item::Bluetooth, Item::Workspaces,
-    Item::ActiveWindow, Item::Clock, Item::Cpu,      Item::Gpu};
-
 std::string format_clock_tooltip(const std::string& format) {
   const std::time_t now = std::time(nullptr);
   std::tm tm{};
@@ -201,28 +197,31 @@ void App::create_bar(Output& output) {
   bar->output_h = output.logical_height();
   bar->scale = output.scale();
   if (bar->output_w <= 0 || bar->output_h <= 0) return;
-  bar->bar_w = std::max(1, static_cast<int>(std::lround(bar->output_w * config_.width_frac)));
   bar->bar_h = std::max(1, static_cast<int>(std::lround(config_.height_px)));
+  bar->pill_w = renderer_.desired_width(config_, state_, bar->output_w);
+  bar->pill_target = bar->pill_w;
   const int top = static_cast<int>(std::lround(bar->output_h * config_.margin_top_frac));
-  const int left = (bar->output_w - bar->bar_w) / 2;
-  LOG_DEBUG("creating bar on %s: output=%dx%d pill=%dx%d scale=%.2f",
-            output.name().c_str(), bar->output_w, bar->output_h, bar->bar_w, bar->bar_h,
+  LOG_DEBUG("creating bar on %s: output=%dx%d pill=%.0fx%d scale=%.2f",
+            output.name().c_str(), bar->output_w, bar->output_h, bar->pill_w, bar->bar_h,
             bar->scale);
 
+  // The layer surface spans the whole output width so the pill can animate its
+  // width without re-committing layer geometry; only the pill area accepts
+  // pointer input (set from the layout).
   Bar* raw = bar.get();
   bar->surface = std::make_unique<LayerSurface>(display_, &output, kLayerTop,
                                                 config_.namespace_name, true);
   bar->surface->set_anchors(ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
                             ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
-  bar->surface->set_margin(top, 0, 0, left);
-  bar->surface->set_size(static_cast<std::uint32_t>(bar->bar_w),
+  bar->surface->set_margin(top, 0, 0, 0);
+  bar->surface->set_size(static_cast<std::uint32_t>(bar->output_w),
                          static_cast<std::uint32_t>(bar->bar_h));
   bar->surface->set_exclusive_zone(bar->bar_h + top);
   bar->surface->on_configure = [this, raw](std::uint32_t, std::uint32_t) {
     raw->configured = true;
     if (raw->canvas == nullptr) return;
-    raw->surface->set_destination(raw->bar_w, raw->bar_h);
-    const int pw = std::max(1, static_cast<int>(std::lround(raw->bar_w * raw->scale)));
+    raw->surface->set_destination(raw->output_w, raw->bar_h);
+    const int pw = std::max(1, static_cast<int>(std::lround(raw->output_w * raw->scale)));
     const int ph = std::max(1, static_cast<int>(std::lround(raw->bar_h * raw->scale)));
     raw->canvas->resize(pw, ph);
     redraw_bar(*raw, Item::All);
@@ -230,8 +229,8 @@ void App::create_bar(Output& output) {
   bar->surface->on_scale = [this, raw](double scale) {
     raw->scale = scale;
     if (raw->canvas == nullptr) return;
-    raw->surface->set_destination(raw->bar_w, raw->bar_h);
-    const int pw = std::max(1, static_cast<int>(std::lround(raw->bar_w * raw->scale)));
+    raw->surface->set_destination(raw->output_w, raw->bar_h);
+    const int pw = std::max(1, static_cast<int>(std::lround(raw->output_w * raw->scale)));
     const int ph = std::max(1, static_cast<int>(std::lround(raw->bar_h * raw->scale)));
     raw->canvas->resize(pw, ph);
     if (raw->tooltip_canvas != nullptr) {
@@ -291,6 +290,12 @@ void App::create_bar(Output& output) {
   });
   bar->fade_timer.disarm();
 
+  loop_.add(bar->anim_timer.get(), EPOLLIN, [this, raw](std::uint32_t) {
+    raw->anim_timer.consume();
+    on_anim_tick(*raw);
+  });
+  bar->anim_timer.disarm();
+
   bars_.push_back(std::move(bar));
 }
 
@@ -298,6 +303,7 @@ void App::destroy_bars() {
   for (auto& bar : bars_) {
     if (bar->hover_delay.valid()) loop_.del(bar->hover_delay.get());
     if (bar->fade_timer.valid()) loop_.del(bar->fade_timer.get());
+    if (bar->anim_timer.valid()) loop_.del(bar->anim_timer.get());
   }
   bars_.clear();
   tooltip_bar_ = nullptr;
@@ -320,6 +326,9 @@ Bar* App::bar_for_surface(wl_surface* surface) {
 
 Item App::hit_test(Bar& bar, double x, double y) {
   bar.hover_ws = -1;
+  // Pointer coordinates are surface-local and the surface spans the output, so
+  // shift into pill-local space.
+  x -= bar.layout.screen_x;
   for (const ItemBox& box : bar.layout.items) {
     if (x < box.rect.x || x > box.rect.x + box.rect.w) continue;
     if (y < box.rect.y || y > box.rect.y + box.rect.h) continue;
@@ -372,8 +381,9 @@ void App::on_pointer_button(wl_surface* surface, std::uint32_t button, double x,
   if (item == Item::Workspaces && button == 0x110 /* BTN_LEFT */ && bar->hover_ws >= 0 &&
       static_cast<std::size_t>(bar->hover_ws) < bar->layout.workspace_slots.size()) {
     if (hyprland_) {
-      hyprland_->dispatch_command(
-          "workspace " + std::to_string(bar->layout.workspace_slots[bar->hover_ws].id));
+      const int id = bar->layout.workspace_slots[bar->hover_ws].id;
+      LOG_DEBUG("workspace click -> %d", id);
+      hyprland_->dispatch_workspace(id);
     }
   } else if (item == Item::Volume && button == 0x112 /* BTN_MIDDLE */) {
     if (audio_) audio_->toggle_mute();
@@ -387,13 +397,14 @@ void App::on_pointer_scroll(wl_surface* surface, int steps, double x, double y) 
   if (item == Item::Volume) {
     if (audio_) audio_->set_volume_relative(steps * 5);
   } else if (item == Item::Workspaces && hyprland_) {
-    hyprland_->dispatch_command(steps > 0 ? "workspace e+1" : "workspace e-1");
+    hyprland_->dispatch_workspace_relative(steps > 0 ? 1 : -1);
   }
 }
 
 void App::on_state_change(Item items) {
   for (auto& bar : bars_) {
-    redraw_bar(*bar, items);
+    update_target_width(*bar);
+    if (!bar->animating) redraw_bar(*bar, items);
   }
   if (tooltip_bar_ != nullptr && tooltip_bar_->tooltip_visible) {
     if (has_item(items, Item::Clock) || has_item(items, Item::Cpu) || has_item(items, Item::Gpu) ||
@@ -414,7 +425,8 @@ void App::redraw_bar(Bar& bar, Item items) {
     bar.dirty |= items;
     return;
   }
-  bar.layout = layout_engine_.compute(config_, state_, bar.output_w, bar.output_h);
+  bar.layout =
+      renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
   renderer_.set_scale(bar.scale);
   cairo_t* cr = bar.canvas->begin();
   if (cr == nullptr) {
@@ -423,23 +435,38 @@ void App::redraw_bar(Bar& bar, Item items) {
   }
   cairo_scale(cr, bar.scale, bar.scale);
   renderer_.draw_bar(cr, bar.layout, state_);
-
-  const bool full = items == Item::All || has_item(items, Item::Workspaces);
-  if (full) {
-    bar.canvas->damage_all();
-  } else {
-    for (Item bit : kAllItemBits) {
-      if (!has_item(items, bit)) continue;
-      const Rect* rect = bar.layout.rect_for(bit);
-      if (rect == nullptr) continue;
-      bar.canvas->damage(static_cast<int>(std::floor(rect->x * bar.scale)) - 1,
-                         static_cast<int>(std::floor(rect->y * bar.scale)) - 1,
-                         static_cast<int>(std::ceil(rect->w * bar.scale)) + 2,
-                         static_cast<int>(std::ceil(rect->h * bar.scale)) + 2);
-    }
-  }
+  // The pill can change width/position, so redraw the whole (small) surface.
+  bar.canvas->damage_all();
   bar.canvas->commit();
+  // Only the pill accepts pointer input; the rest of the strip is click-through.
+  bar.surface->set_input_rect(bar.layout.screen_x, 0, bar.layout.bar_w, bar.layout.bar_h);
+  bar.surface->commit();
   bar.dirty = Item::None;
+}
+
+void App::update_target_width(Bar& bar) {
+  const double target = renderer_.desired_width(config_, state_, bar.output_w);
+  if (std::fabs(target - bar.pill_target) < 0.5) return;
+  LOG_DEBUG("pill width target %.0f -> %.0f", bar.pill_target, target);
+  bar.pill_target = target;
+  if (!bar.anim_timer.valid()) return;
+  if (!bar.animating) {
+    bar.animating = true;
+    bar.anim_timer.arm_relative_ms(16, false);
+  }
+}
+
+void App::on_anim_tick(Bar& bar) {
+  const double diff = bar.pill_target - bar.pill_w;
+  if (std::fabs(diff) < 0.5) {
+    bar.pill_w = bar.pill_target;
+    bar.animating = false;
+    bar.anim_timer.disarm();
+    LOG_DEBUG("pill width settled at %.0f", bar.pill_w);
+  } else {
+    bar.pill_w += diff * 0.25;
+  }
+  redraw_bar(bar, Item::All);
 }
 
 std::vector<std::string> App::tooltip_lines(Item item, Bar& bar) const {
@@ -548,8 +575,9 @@ void App::show_tooltip(Bar& bar) {
 
   const int logical_w = static_cast<int>(std::ceil(bar.tooltip_metrics.width));
   const Rect* rect = bar.layout.rect_for(bar.hover);
-  const double item_center = rect != nullptr ? rect->x + rect->w / 2.0 : bar.bar_w / 2.0;
-  const int bar_screen_x = (bar.output_w - bar.bar_w) / 2;
+  const double item_center =
+      rect != nullptr ? rect->x + rect->w / 2.0 : bar.layout.bar_w / 2.0;
+  const int bar_screen_x = bar.layout.screen_x;
   int tx = static_cast<int>(std::lround(bar_screen_x + item_center - logical_w / 2.0));
   tx = std::clamp(tx, 0, std::max(0, bar.output_w - logical_w));
   bar.tooltip_x = tx;

@@ -60,13 +60,13 @@ void config_apply_default_slots(Config& config) {
   config.slots.clear();
   // Fractions chosen so all items (including the added WiFi/Bluetooth cluster)
   // fit while keeping the reference look; see README "Layout assumption".
-  config.slots["battery"] = ItemSlot{true, 0.055, 0.155};
-  config.slots["volume"] = ItemSlot{true, 0.185, 0.285};
-  config.slots["wifi"] = ItemSlot{true, 0.330, 0.352};
-  config.slots["bluetooth"] = ItemSlot{true, 0.358, 0.380};
-  config.slots["workspaces"] = ItemSlot{true, 0.386, 0.700};
-  config.slots["window"] = ItemSlot{true, 0.730, 0.845};
-  config.slots["clock"] = ItemSlot{true, 0.875, 0.960};
+  config.slots["battery"] = ItemSlot{true, 0.045, 0.112};
+  config.slots["volume"] = ItemSlot{true, 0.132, 0.199};
+  config.slots["wifi"] = ItemSlot{true, 0.225, 0.244};
+  config.slots["bluetooth"] = ItemSlot{true, 0.250, 0.269};
+  config.slots["workspaces"] = ItemSlot{true, 0.262, 0.430};
+  config.slots["window"] = ItemSlot{true, 0.450, 0.910};
+  config.slots["clock"] = ItemSlot{true, 0.922, 0.986};
 }
 
 std::string config_default_path() {
@@ -174,6 +174,8 @@ Config config_load(const std::string& path, bool* used_defaults) {
   config.wifi_off = get_string(table, "icons.wifi_off", config.wifi_off);
   config.wifi_wired = get_string(table, "icons.wifi_wired", config.wifi_wired);
   config.window_glyph = get_string(table, "icons.window", config.window_glyph);
+  config.window_title_max_chars =
+      get_int(table, "behavior.window_title_max_chars", config.window_title_max_chars);
 
   config.text = get_color(table, "colors.text", config.text);
   config.dim = get_color(table, "colors.dim", config.dim);

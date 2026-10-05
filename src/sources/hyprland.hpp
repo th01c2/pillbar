@@ -22,6 +22,11 @@ class HyprlandSource : public Source {
 
   // Sends "dispatch <command>" over the command socket (workspace switch, etc).
   void dispatch_command(const std::string& command);
+  // Switches to a workspace by id (click) or relative to the current one
+  // (scroll). Hyprland >= 0.5x moved dispatchers to a Lua API, so these try the
+  // Lua form first and fall back to the legacy plain-text dispatcher.
+  void dispatch_workspace(int id);
+  void dispatch_workspace_relative(int delta);
 
  private:
   bool connect_event();
@@ -48,4 +53,3 @@ class HyprlandSource : public Source {
 };
 
 }  // namespace pillbar
-

@@ -25,12 +25,32 @@ void set_color(cairo_t* cr, const Color& c, double alpha_mul = 1.0) {
   cairo_set_source_rgba(cr, c.r, c.g, c.b, c.a * alpha_mul);
 }
 
-std::string uppercase_ascii(const std::string& input) {
-  std::string out = input;
-  for (char& ch : out) {
-    if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 'a' + 'A');
+// Truncates on UTF-8 boundaries; when cut, the last character becomes an
+// ellipsis so the result is still `max_chars` characters at most.
+std::string truncate_chars(const std::string& input, int max_chars) {
+  if (max_chars <= 0) return {};
+  std::size_t index = 0;
+  int count = 0;
+  while (index < input.size()) {
+    const std::size_t start = index;
+    const unsigned char lead = static_cast<unsigned char>(input[index]);
+    std::size_t width = 1;
+    if ((lead & 0x80u) == 0u) {
+      width = 1;
+    } else if ((lead & 0xE0u) == 0xC0u) {
+      width = 2;
+    } else if ((lead & 0xF0u) == 0xE0u) {
+      width = 3;
+    } else {
+      width = 4;
+    }
+    index += std::min(width, input.size() - index);
+    ++count;
+    if (count == max_chars && index < input.size()) {
+      return input.substr(0, start) + "\u2026";
+    }
   }
-  return out;
+  return input;
 }
 
 std::string format_percent(int value) { return std::to_string(value) + "%"; }
@@ -74,6 +94,86 @@ std::string wifi_icon(const Config& config, const WifiState& wifi) {
   return config.wifi_levels[static_cast<std::size_t>(level) - 1];
 }
 
+// Layout metrics (logical pixels).
+constexpr double kPillPad = 14.0;      // left/right padding inside the pill
+constexpr double kItemGap = 12.0;      // space between items
+constexpr double kIconGap = 6.0;       // icon -> label inside an item
+constexpr double kNameTitleGap = 8.0;  // app name -> window title
+constexpr int kAppNameMaxChars = 24;
+
+Item item_of(const std::string& name) {
+  if (name == "battery") return Item::Battery;
+  if (name == "volume") return Item::Volume;
+  if (name == "wifi") return Item::Wifi;
+  if (name == "bluetooth") return Item::Bluetooth;
+  if (name == "workspaces") return Item::Workspaces;
+  if (name == "window") return Item::ActiveWindow;
+  if (name == "clock") return Item::Clock;
+  if (name == "cpu") return Item::Cpu;
+  if (name == "gpu") return Item::Gpu;
+  return Item::None;
+}
+
+int workspace_count(const Config& config, const AppState& state) {
+  int count = config.min_workspaces > 0 ? config.min_workspaces : 5;
+  int max_id = 0;
+  for (const WorkspaceState& ws : state.workspaces.list) max_id = std::max(max_id, ws.id);
+  count = std::max(count, max_id);
+  return count > 0 ? count : 5;
+}
+
+std::string window_name_text(const WindowState& window) {
+  if (!window.cls.empty()) return truncate_chars(window.cls, kAppNameMaxChars);
+  return {};
+}
+
+std::string window_title_text(const Config& config, const WindowState& window) {
+  const std::string& raw = window.title.empty() ? window.cls : window.title;
+  return truncate_chars(raw, config.window_title_max_chars);
+}
+
+std::string volume_label(const VolumeState& volume) {
+  return volume.muted ? std::string("muted") : format_percent(volume.percent);
+}
+
+// Intrinsic content width of one item, or a negative value when the item has
+// nothing to show and should be skipped.
+double item_width(const Renderer& renderer, const Config& config, const AppState& state,
+                  Item item) {
+  switch (item) {
+    case Item::Battery:
+      if (!state.battery.present) return -1.0;
+      return renderer.icon_width(battery_icon(config, state.battery)) + kIconGap +
+             renderer.text_width(format_percent(state.battery.percent));
+    case Item::Volume:
+      if (!state.volume.available) return -1.0;
+      return renderer.icon_width(volume_icon(config, state.volume)) + kIconGap +
+             renderer.text_width(volume_label(state.volume));
+    case Item::Wifi:
+      if (!state.wifi.present) return -1.0;
+      return renderer.icon_width(wifi_icon(config, state.wifi));
+    case Item::Bluetooth:
+      if (!state.bluetooth.present) return -1.0;
+      return config.height_px * 0.5;
+    case Item::Workspaces: {
+      const double diameter = std::min(20.0, config.height_px * 0.62);
+      return static_cast<double>(workspace_count(config, state)) * diameter * 1.35;
+    }
+    case Item::ActiveWindow: {
+      if (!state.window.present) return -1.0;
+      double width = renderer.icon_width(config.window_glyph) + kIconGap;
+      const std::string name = window_name_text(state.window);
+      if (!name.empty()) width += renderer.text_width(name) + kNameTitleGap;
+      width += renderer.text_width(window_title_text(config, state.window));
+      return width;
+    }
+    case Item::Clock:
+      return renderer.text_width(format_clock(state.clock));
+    default:
+      return -1.0;
+  }
+}
+
 }  // namespace
 
 void Renderer::configure(const Config& config) {
@@ -82,6 +182,99 @@ void Renderer::configure(const Config& config) {
   icon_text_.configure(config.icon_fonts,
                        std::max(1.0, config.height_px * config.icon_size_frac), 0.0,
                        /*antialias=*/true);
+}
+
+double Renderer::desired_width(const Config& config, const AppState& state, int output_w) const {
+  double total = kPillPad * 2.0;
+  int shown = 0;
+  for (const std::string& name : config.order) {
+    const auto it = config.slots.find(name);
+    if (it == config.slots.end() || !it->second.enabled) continue;
+    const double width = item_width(*this, config, state, item_of(name));
+    if (width < 0.0) continue;
+    if (shown > 0) total += kItemGap;
+    total += width;
+    ++shown;
+  }
+  const double max_width = static_cast<double>(output_w) * 0.96;
+  return std::min(std::max(total, 120.0), max_width);
+}
+
+BarLayout Renderer::compute_layout(const Config& config, const AppState& state, double pill_w,
+                                   int output_w, int output_h) const {
+  BarLayout layout;
+  layout.bar_w = std::max(1, static_cast<int>(std::lround(pill_w)));
+  layout.bar_h = std::max(1, static_cast<int>(std::lround(config.height_px)));
+  layout.screen_x = (output_w - layout.bar_w) / 2;
+  layout.screen_y =
+      static_cast<int>(std::lround(static_cast<double>(output_h) * config.margin_top_frac));
+
+  struct Entry {
+    Item item = Item::None;
+    double width = 0.0;
+  };
+  std::vector<Entry> entries;
+  double content = 0.0;
+  for (const std::string& name : config.order) {
+    const auto it = config.slots.find(name);
+    if (it == config.slots.end() || !it->second.enabled) continue;
+    const Item item = item_of(name);
+    const double width = item_width(*this, config, state, item);
+    if (width < 0.0) continue;
+    if (!entries.empty()) content += kItemGap;
+    content += width;
+    entries.push_back(Entry{item, width});
+  }
+
+  // If the pill is not wide enough yet (e.g. mid-animation), take the deficit
+  // out of the window title, which is the only elastic item.
+  const double available = static_cast<double>(layout.bar_w) - kPillPad * 2.0;
+  if (content > available) {
+    double deficit = content - available;
+    for (Entry& entry : entries) {
+      if (entry.item != Item::ActiveWindow) continue;
+      const double take = std::min(deficit, entry.width);
+      entry.width -= take;
+      content -= take;
+      deficit -= take;
+      break;
+    }
+  }
+
+  double cursor = (static_cast<double>(layout.bar_w) - content) / 2.0;
+  if (cursor < kPillPad) cursor = kPillPad;
+  const double center_y = static_cast<double>(layout.bar_h) / 2.0;
+  for (const Entry& entry : entries) {
+    const Rect rect{static_cast<int>(std::lround(cursor)), 0,
+                    std::max(1, static_cast<int>(std::lround(entry.width))), layout.bar_h};
+    layout.items.push_back(ItemBox{entry.item, rect});
+    cursor += entry.width + kItemGap;
+  }
+
+  std::size_t index = 0;
+  for (const ItemBox& box : layout.items) {
+    if (box.item != Item::Workspaces) continue;
+    const int count = workspace_count(config, state);
+    const double diameter = std::min(20.0, std::min(static_cast<double>(box.rect.w) / count * 1.1,
+                                                    config.height_px * 0.62));
+    for (int i = 0; i < count; ++i, ++index) {
+      WorkspaceSlot slot;
+      slot.cx = static_cast<double>(box.rect.x) +
+                (static_cast<double>(i) + 0.5) * static_cast<double>(box.rect.w) / count;
+      slot.cy = center_y;
+      slot.diameter = std::max(1.0, diameter);
+      if (index < state.workspaces.list.size()) {
+        slot.id = state.workspaces.list[index].id;
+        if (state.workspaces.list[index].focused) {
+          layout.workspace_focused_index = static_cast<int>(index);
+        }
+      } else {
+        slot.id = static_cast<int>(index) + 1;
+      }
+      layout.workspace_slots.push_back(slot);
+    }
+  }
+  return layout;
 }
 
 std::string Renderer::ellipsize(const std::string& input, double max_width) const {
@@ -144,6 +337,10 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
   cairo_paint(cr);
   cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
 
+  // Item rects are pill-local; the pill is centered inside the (wide) surface.
+  cairo_save(cr);
+  cairo_translate(cr, layout.screen_x, 0.0);
+
   const double radius = layout.bar_h / 2.0;
   if (config_->shadow) {
     for (int i = 6; i >= 1; --i) {
@@ -178,7 +375,7 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
           glyph_w = icon_text_.measure(glyph);
           icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, color);
         }
-        const double text_x = r.x + glyph_w + layout.bar_w * 0.010;
+        const double text_x = r.x + glyph_w + kIconGap;
         text_.draw_left(cr, text_x, center_y, format_percent(state.battery.percent), color);
         break;
       }
@@ -191,9 +388,8 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
           glyph_w = icon_text_.measure(glyph);
           icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, icon_color);
         }
-        const double text_x = r.x + glyph_w + layout.bar_w * 0.010;
-        const std::string label =
-            state.volume.muted ? "muted" : format_percent(state.volume.percent);
+        const double text_x = r.x + glyph_w + kIconGap;
+        const std::string label = volume_label(state.volume);
         text_.draw_left(cr, text_x, center_y, label,
                         state.volume.muted ? config_->dim : config_->text);
         break;
@@ -260,11 +456,19 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
           icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, config_->window_glyph,
                                  config_->window_icon);
         }
-        const double text_x = r.x + glyph_w + layout.bar_w * 0.010;
-        const double max_w = static_cast<double>(r.x + r.w) - text_x;
-        const std::string title =
-            uppercase_ascii(state.window.cls.empty() ? state.window.title : state.window.cls);
-        text_.draw_left(cr, text_x, center_y, ellipsize(title, max_w), config_->text);
+        double text_x = r.x + glyph_w + kIconGap;
+        const double max_x = static_cast<double>(r.x + r.w);
+        // App name first (dim), then the window title capped to a fixed count.
+        const std::string name = window_name_text(state.window);
+        if (!name.empty() && text_x < max_x) {
+          const double name_w = text_.measure(name);
+          text_.draw_left(cr, text_x, center_y, ellipsize(name, max_x - text_x), config_->dim);
+          text_x += name_w + kNameTitleGap;
+        }
+        if (text_x < max_x) {
+          const std::string title = window_title_text(*config_, state.window);
+          text_.draw_left(cr, text_x, center_y, ellipsize(title, max_x - text_x), config_->text);
+        }
         break;
       }
       case Item::Clock: {
@@ -300,6 +504,7 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
         break;
     }
   }
+  cairo_restore(cr);
 }
 
 }  // namespace pillbar

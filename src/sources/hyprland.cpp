@@ -184,6 +184,26 @@ void HyprlandSource::dispatch_command(const std::string& command) {
   request("dispatch " + command);
 }
 
+namespace {
+// Returns true when the compositor replied "ok" (legacy replies are empty on
+// success in some versions, so only an explicit error counts as failure).
+bool dispatch_ok(const std::string& response) {
+  return response.rfind("error", 0) != 0;
+}
+}  // namespace
+
+void HyprlandSource::dispatch_workspace(int id) {
+  const std::string name = std::to_string(id);
+  if (dispatch_ok(request("dispatch hl.dsp.focus({workspace=\"" + name + "\"})"))) return;
+  request("dispatch workspace " + name);
+}
+
+void HyprlandSource::dispatch_workspace_relative(int delta) {
+  const std::string selector = delta > 0 ? "e+1" : "e-1";
+  if (dispatch_ok(request("dispatch hl.dsp.focus({workspace=\"" + selector + "\"})"))) return;
+  request("dispatch workspace " + selector);
+}
+
 void HyprlandSource::requery() {
   if (command_path_.empty()) return;
   std::string error;

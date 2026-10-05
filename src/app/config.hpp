@@ -21,7 +21,7 @@ struct ItemSlot {
 
 struct Config {
   // --- bar geometry ---
-  double width_frac = 0.30;         // fraction of output width
+  double width_frac = 0.50;         // fraction of output width
   double height_px = 30.0;          // logical pixels
   double margin_top_frac = 0.012;   // fraction of output height (~1.2%)
   std::string layer = "top";        // background | bottom | top | overlay
@@ -64,6 +64,8 @@ struct Config {
   std::string wifi_off = "\U000F092F";
   std::string wifi_wired = "\U000F0200";
   std::string window_glyph = "\uEA85";
+  // Window title is truncated to this many characters before fitting.
+  int window_title_max_chars = 40;
 
   // --- palette ---
   Color text{0.902, 0.902, 0.902, 1.0};      // #e6e6e6

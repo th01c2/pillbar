@@ -34,6 +34,8 @@ class LayerSurface {
   void set_exclusive_zone(std::int32_t zone);
   void set_margin(int top, int right, int bottom, int left);
   void set_input_none();
+  // Restricts pointer input to a single surface-local rectangle.
+  void set_input_rect(int x, int y, int width, int height);
   void set_destination(int width, int height);
   void commit();
 

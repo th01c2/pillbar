@@ -33,15 +33,4 @@ struct BarLayout {
   Rect local_bounds() const { return Rect{0, 0, bar_w, bar_h}; }
 };
 
-class LayoutEngine {
- public:
-  const BarLayout& compute(const Config& config, const AppState& state, int output_w,
-                           int output_h);
-  const BarLayout& layout() const { return layout_; }
-
- private:
-  BarLayout layout_;
-};
-
 }  // namespace pillbar
-
