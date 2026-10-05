@@ -382,20 +382,33 @@ void App::on_pointer_enter(wl_surface* surface, double x, double y) {
 void App::on_pointer_motion(wl_surface* surface, double x, double y) {
   Bar* bar = bar_for_surface(surface);
   if (bar == nullptr) return;
+  const int previous_ws = bar->hover_ws;  // hit_test overwrites this
   const Item item = hit_test(*bar, x, y);
   // Clickable items show the hand cursor, everything else the arrow.
   if (Pointer* pointer = display_.pointer()) {
     pointer->set_cursor(item == Item::Workspaces || item == Item::Recorder, bar->scale);
   }
-  if (item != bar->hover) {
-    bar->hover = item;
+  // Every workspace numeral is the same item, so also react when the specific
+  // circle under the pointer changes — otherwise the previous workspace's
+  // tooltip stays on screen until the pointer leaves the whole bar.
+  const bool workspace_changed =
+      item == Item::Workspaces && bar->hover_ws != previous_ws;
+  if (item == bar->hover && !workspace_changed) return;
+
+  bar->hover = item;
+  if (item == Item::None) {
     hide_tooltip(*bar);
-    if (item != Item::None) {
-      bar->hover_delay.arm_relative_ms(config_.tooltip_delay_ms, true);
-    } else {
-      bar->hover_delay.disarm();
-    }
+    bar->hover_delay.disarm();
+    return;
   }
+  if (bar->tooltip_visible) {
+    // Already showing a tooltip: swap its contents instead of hiding and
+    // waiting out the hover delay again.
+    update_tooltip(*bar);
+    return;
+  }
+  hide_tooltip(*bar);
+  bar->hover_delay.arm_relative_ms(config_.tooltip_delay_ms, true);
 }
 
 void App::on_pointer_leave(wl_surface* surface) {
