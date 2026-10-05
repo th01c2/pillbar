@@ -90,6 +90,9 @@ void RecorderSource::on_tick() {
 void RecorderSource::rescan() {
   RecorderState next;
   std::vector<int> pids;
+  // Full refresh every ~10s (at the idle 0.5s cadence) to survive pid reuse.
+  const bool full_refresh = (rescans_++ % 20) == 0;
+  std::map<int, std::string> names;
 
   DIR* dir = ::opendir("/proc");
   if (dir == nullptr) return;
@@ -97,7 +100,14 @@ void RecorderSource::rescan() {
     if (entry->d_name[0] < '0' || entry->d_name[0] > '9') continue;
     const int pid = std::atoi(entry->d_name);
     if (pid <= 0) continue;
-    const std::string name = read_comm(pid);
+    std::string name;
+    const auto cached = names_.find(pid);
+    if (!full_refresh && cached != names_.end()) {
+      name = cached->second;
+    } else {
+      name = read_comm(pid);
+    }
+    names[pid] = name;
     if (!is_recorder_name(name)) continue;
     if (next.process.empty()) {
       next.process = name;
@@ -106,6 +116,7 @@ void RecorderSource::rescan() {
     pids.push_back(pid);
   }
   ::closedir(dir);
+  names_.swap(names);
   next.active = !pids.empty();
   next.pulse = next.active ? pulse_at(anim_ms_) : 0.0;
   if (!next.active) {

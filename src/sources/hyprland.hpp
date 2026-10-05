@@ -34,6 +34,8 @@ class HyprlandSource : public Source {
   void on_event();
   void handle_line(const std::string& line);
   void requery();
+  void requery_window();
+  void update_window();
   std::string request(const std::string& command);
   void schedule_reconnect();
 

@@ -1,170 +1,192 @@
 # pillbar
 
-A floating, detached, pill-shaped (stadium) top status bar for Wayland/Hyprland,
-written in C++20 with `wlr-layer-shell`, `wl_shm` + Cairo/Pango and a single
-event-driven `epoll` loop. Tiles: battery, volume, Wi-Fi, Bluetooth, workspaces,
-active window and a 24-hour clock, with hover tooltips on every item.
+[![flake](https://img.shields.io/badge/nix-flake-5277C3?logo=nixos&logoColor=white)](flake.nix)
+[![wayland](https://img.shields.io/badge/Wayland-layer--shell-00AEEF)](https://wayland.freedesktop.org/)
+[![C++](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus)](src)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-The bar is a plain `wl_surface` painted with Cairo into `wl_shm` buffers; there
-is no Qt/GTK/Electron and no scripting runtime. Redraws happen only when state
-changes, and the process makes **zero wakeups while idle** except the
-once-per-minute clock tick.
+A **notch**-style status bar for Hyprland: a single black notch that hugs the top
+edge of the screen, sizes itself to its content, and reserves exactly the space
+it occupies.
 
-## Layout assumption
+Written in C++20 against `wlr-layer-shell`, `wl_shm` and Cairo/Pango with a
+single `epoll` loop for everything. No Qt/GTK, no Electron, no scripting
+runtime, no config file.
 
-The bar is a top-centred notch that reserves the strip it occupies (layer-shell
-exclusive zone) and sizes itself to its content: item widths are intrinsic
-(icon + text), and the notch animates wider/narrower when e.g. the window title
-changes length. All geometry, colours, fonts and icon glyphs are compiled into
-the binary; there is no config file.
+## Highlights
 
-## Build and run (NixOS)
+- **Notch, not an overlay.** Flush with the top edge, rounded only at the
+  bottom, anchored `TOP|LEFT|RIGHT` with an exclusive zone, so Hyprland reserves
+  the strip and tiled windows never slide under it. No window rules needed.
+- **Content-sized and softly animated.** Item widths are intrinsic (icon +
+  text); the notch is only as wide as it needs to be and eases to its new size
+  in ~160 ms when the window title, workspace count or recorder state changes.
+- **Event-driven.** Hyprland's event socket, udev, D-Bus signals, PulseAudio
+  callbacks and `timerfd`s. Otherwise the process sits in `epoll_wait`.
+- **Compiled-in settings.** Palette, fonts, glyphs, geometry and item order live
+  in the source; there is no runtime config to keep in sync.
 
-```sh
-nix develop                      # or: nix-shell
-cmake -B build -G Ninja
-cmake --build build
-./build/pillbar                  # run it (needs a running Wayland session)
-```
+## Items
 
-Install as a package:
+| Item | Shows | Notes |
+| --- | --- | --- |
+| Battery | Nerd Font glyph + percent | Green while charging. AC online counts as charging even at a charge limit. 10 %-step icon ladder; udev-driven with an adaptive fallback timer. |
+| Volume | Speaker glyph + percent | PulseAudio subscription; muted shows `muted` in a dim shade. |
+| Network | Wi-Fi strength or ethernet glyph | NetworkManager over D-Bus. Ethernet wins when both are up, else Wi-Fi 1–4, else `off`. Tooltip: SSID, band, link rate, IP, live up/down rates. |
+| Bluetooth | Glyph | BlueZ D-Bus enumeration. |
+| Workspaces | Numerals | Only workspaces holding windows or focused, so the item grows as you open more. Left click switches, scroll goes prev/next. |
+| Window | App name + title | Title capped at 20 characters, UTF-8 safe; the app name is drawn in a dimmer shade. |
+| Recorder | Pulsing red dot | Appears only while a screen recorder runs; left click stops it. |
+| Clock | `HH:MM` | Minute-boundary timer; tooltip adds the date, live seconds and CPU/GPU. |
 
-```sh
-nix build .#                     # builds the `pillbar` package
-# or, without flakes:
-nix-build -E 'with import <nixpkgs> {}; callPackage ./default.nix {}'
-```
+## Requirements
 
-Run it under Hyprland (see `hyprland/pillbar.conf`):
+Hyprland (workspaces, window, dispatchers), NetworkManager (network), PipeWire
+or PulseAudio (volume), BlueZ (Bluetooth), and a Nerd Font for the icons. The
+flake pulls in the rest: `wayland-client`, `cairo`, `pango`, `libsystemd`,
+`libudev`, `libpulse`, `fontconfig`.
 
-```conf
-exec-once = pillbar
-layerrule = blur off, pillbar
-layerrule = blur off, pillbar-tooltip
-layerrule = ignorezero, pillbar-tooltip
-```
+## Build and run
 
-Logging is controlled by `PILLBAR_LOG=error|warn|info|debug` (default `warn`).
-
-## Configuration
-
-There is no config file. Every setting is a compiled-in default in
-`src/app/config.hpp` (palette, fonts, icon glyphs, sizes) and
-`src/app/config.cpp` (item slots). Change a value there and rebuild:
+### With the flake (recommended)
 
 ```sh
 nix build .#pillbar
 pkill -x pillbar; setsid -f ./result/bin/pillbar
 ```
 
-## Interactions
+`nix build` produces the runnable binary with its full runtime closure.
 
-* Hover any item for 250ms → tooltip fades in below the pill at that item.
-* Volume: scroll = ±5%, middle click = toggle mute.
-* Workspaces: left click switches, scroll cycles `workspace e±1`.
-* Clock tooltip shows full date/time with live seconds; the bar clock updates
-  only once per minute.
-* CPU/GPU appear inside the clock/system tooltip and are sampled only while the
-  tooltip is open.
-
-## How each source gets its events (no polling)
-
-| Item | Transport | Events |
-| --- | --- | --- |
-| Hyprland (workspaces, window, monitors) | unix socket `.socket2.sock`, non-blocking, line-parsed, reconnect w/ backoff | `workspace(v2)`, `activewindow(v2)`, `openwindow`, `closewindow`, `movewindow`, `createworkspace`, `destroyworkspace`, `focusedmon`, `monitoradded/removed`, `fullscreen`. `.socket.sock` is used **only** for initial `j/...` queries and `dispatch`. `hyprctl` is never polled. |
-| Battery / AC | libudev `NETLINK_KOBJECT_UEVENT` monitor on subsystem `power_supply` | uevent → re-read `/sys/class/power_supply/*`. Because some firmware emits sparse capacity uevents, a **single adaptive timerfd** is armed only while charging/discharging and not full (60s, 30s below 20%) and disarmed otherwise. |
-| Volume | PulseAudio `pa_context_subscribe` (sink + server) | The libpulse sockets are registered in the epoll loop through a custom `pa_mainloop_api` (`src/sources/pulse.cpp`). No `pactl` polling. |
-| Wi-Fi | **NetworkManager over D-Bus** (chosen path over raw nl80211) | `PropertiesChanged` signals on the NM daemon, wireless device and access point. Signal strength is re-read only after such a signal; IP address is read with `getifaddrs` only when the tooltip opens. |
-| Bluetooth | BlueZ D-Bus | `PropertiesChanged` and `InterfacesAdded/Removed`; a signal triggers `GetManagedObjects` re-enumeration. |
-| Clock | `timerfd(CLOCK_REALTIME)` | Armed absolutely to the next minute boundary with `TFD_TIMER_CANCEL_ON_SET`, so NTP/manual clock changes re-sync it. |
-| CPU / GPU | hover-gated `timerfd` | `/proc/stat` deltas + hwmon + cpufreq, and amdgpu sysfs / NVML-via-dlopen / i915+ xe hwmon. Sampled **only** while the relevant tooltip is open; disarmed on leave. |
-| Resume | D-Bus `org.freedesktop.login1` | `PrepareForSleep(false)` forces a full refresh of every source. |
-
-Every source compares its new value against the previous one and only emits a
-typed `Item` change when it actually changed; the `SourceManager` coalesces
-bursts with a single ~16ms `timerfd`. The renderer then damages only the
-affected item rectangles.
-
-GPU vendor detection reads hwmon `name` files (`k10temp`/`coretemp`/`zenpower`
-for CPU, `amdgpu`/`nvidia`/`i915`/`xe` for GPU) at startup and on udev hwmon
-changes — never hardcoded `hwmonN` paths.
-
-## Architecture
-
-```
-Source ──typed change──► SourceManager (16ms debounce) ──► State store (diff)
-                                                              │
-                                                   Layout engine ──► Renderer
-```
-
-Sources never touch rendering; the renderer never reads fds. Everything runs in
-one thread on one `epoll` loop (Wayland fd, Hyprland sockets, netlink monitor,
-D-Bus fd, PulseAudio fds, inotify, timerfds, signalfd).
-
-## Verifying idle behaviour (zero polling)
-
-1. Start the bar, then leave it untouched for a minute:
-
-   ```sh
-   PILLBAR_LOG=info ./build/pillbar &
-   PID=$!
-   strace -c -p $PID     # press Ctrl-C after ~30s
-   ```
-
-   You should see the process almost entirely in `epoll_wait`, with no repeated
-   `clock_gettime`/`read`/`recv` polling. The only scheduled wakeup is the
-   minute-aligned clock `timerfd`.
-
-2. Count wakeups:
-
-   ```sh
-   powertop --time=60        # or: perf stat -p $PID -e context-switches sleep 60
-   ```
-
-   Idle wakeups should be ~1/minute. Nothing else fires unless a real event
-   (battery, volume, network, Hyprland, pointer) arrives. On a *busy* session
-   you will additionally see one wakeup per real event — e.g. an application
-   that rewrites its window title ten times a second makes the Hyprland socket
-   readable that often. That is correct event handling, not polling: the bar
-   reads the socket, ignores the irrelevant event and never redraws.
-
-3. Confirm no sampling when not hovering: `strace -f -p $PID -e openat` and make
-   sure `/proc/stat`, `hwmon` and GPU sysfs files are only opened while a
-   tooltip is on screen.
-
-## Self-review checklist
-
-* [x] **Zero polling for events** — every source is fd/event driven; the only
-      timers are the minute clock, the 16ms debounce, the battery fallback
-      (disarmed when idle), and hover-gated sampling/fade timers.
-* [x] **Redraw only on dirty** — `App::on_state_change` redraws only the changed
-      items' damaged rectangles (`wl_surface_damage_buffer`); idle → no commits.
-* [x] **Tooltips on all items** — pointer enter/motion/leave hit-test every item
-      rect; each item has a dedicated tooltip body.
-* [x] **Pixel font, AA off** — Cairo antialias `NONE`, hinting `FULL`, fontconfig
-      family list with Terminal-style fallbacks.
-* [x] **Pill proportions** — radius = height/2 (stadium path), 30px tall,
-      ~1.2% top margin, flat opaque fill, layer `top`, namespace `pillbar`,
-      exclusive zone set so windows do not overlap.
-* [x] **Hyprland workspaces via socket2** — `.socket2.sock` event stream,
-      `.socket.sock` only for initial queries/dispatch.
-* [x] Builds warning-free with GCC 15 and Clang (`-Wall -Wextra -Wpedantic`).
-
-## Commit
+### Iterating on the source
 
 ```sh
-git add -A
-git commit -m "pillbar: floating pill status bar for Hyprland (event-driven Wayland/Cairo)"
+nix develop
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
 ```
 
-## Notes / decisions
+`build/pillbar` links against the dev shell's glibc, so run it from inside
+`nix develop` — or use `nix build` for a standalone binary.
 
-* Wi-Fi uses NetworkManager over D-Bus (the D-Bus alternative explicitly
-  allowed by the spec) instead of raw nl80211, for a fully event-driven and much
-  smaller footprint.
-* Audio uses PulseAudio (via `pa_mainloop_api` integrated into epoll); PipeWire's
-  Pulse compatibility layer or `pipewire-pulse` works transparently.
-* "Primary output" means the first output returned by the registry, because
-  Wayland exposes no primary-output flag.
-* The tooltip fade is a short opacity animation driven by a timer armed only
-  during the transition, so it never causes idle wakeups.
+### From your own NixOS flake
+
+```nix
+inputs.pillbar.url = "github:YOURUSER/Sebar";
+
+# ...
+environment.systemPackages = [ inputs.pillbar.packages.${pkgs.system}.default ];
+```
+
+Time-savers:
+
+- While developing, point the input at your checkout —
+  `url = "path:/home/you/Sebar"` — and `nixos-rebuild` picks up the working tree
+  without committing.
+- With a `github:` input, run `nix flake update pillbar` after pushing, or the
+  lock file keeps you on the previous commit.
+- `nix build` only copies files tracked by git, so **new source files must be
+  `git add`ed** or the build will not see them.
+
+### Hyprland
+
+```conf
+# ~/.config/hypr/pillbar.conf   (source it, or paste inline)
+exec-once = pillbar
+
+# Keep the notch crisp: no compositor blur or glass.
+layerrule = blur off, pillbar
+layerrule = blur off, pillbar-tooltip
+layerrule = ignorealpha 0.0, pillbar-tooltip
+layerrule = ignorezero, pillbar-tooltip
+```
+
+Logging: `PILLBAR_LOG=error|warn|info|debug` (default `warn`).
+
+## Customizing
+
+Everything is compiled in. Edit, rebuild, restart:
+
+```sh
+nix build .#pillbar && (pkill -x pillbar; setsid -f ./result/bin/pillbar)
+```
+
+| What | Where |
+| --- | --- |
+| Notch fill, radius, height, top margin | `src/app/config.hpp` — `bar_color`, `notch_radius_px`, `height_px`, `margin_top_frac` |
+| Palette (text, dim, workspaces, battery, recorder) | `src/app/config.hpp` — the `Color` members |
+| Fonts, sizes, icon font list and glyphs | `src/app/config.hpp` — `fonts`, `icon_fonts`, `*_glyph`, `icon_size_frac` |
+| Behaviour (title cap, recorder pulse, workspaces, tooltips) | `src/app/config.hpp` — `window_title_max_chars`, `recorder_pulse_ms`, `min_workspaces`, `tooltip_*` |
+| Item order and per-item slots | `Config::order` in `src/app/config.hpp`; slots in `src/app/config.cpp` |
+
+Colours are written as hex through a small helper, so there is no float maths to
+do by hand:
+
+```cpp
+Color bar_color = rgb(0x100F0F);         // notch fill
+Color recorder_color = rgb(0xff3b30);    // bright end of the recorder pulse
+Color recorder_color_dim = rgb(0x7a0d08);
+```
+
+## Interactions
+
+| Where | Action |
+| --- | --- |
+| Any item | Hover for 250 ms → tooltip fades in under the notch |
+| Volume | Scroll ±5 %, middle click toggles mute |
+| Workspaces | Left click switches, scroll cycles |
+| Recorder | Left click stops the recording (SIGTERM) |
+| Clock / CPU / GPU | Tooltip streams live while hovered |
+
+## How it works
+
+```
+ sources ──typed change──► SourceManager (16 ms coalesce) ──► state diff
+                                                                  │
+                                              intrinsic layout ──► renderer
+```
+
+| Part | Transport | Trigger |
+| --- | --- | --- |
+| Workspaces, window | Hyprland `.socket2.sock` | `workspace(v2)`, `openwindow`, `closewindow`, `movewindow`, `createworkspace`, `destroyworkspace`, `focusedmon`, `monitor*` re-query everything; `activewindow(v2)` re-queries only the window, so a title that rewrites itself does not cost four socket queries. |
+| Battery / AC | libudev `power_supply` uevents | Re-reads `/sys/class/power_supply`; one adaptive fallback timer runs only while the battery is not full. |
+| Volume | PulseAudio `pa_context_subscribe` | libpulse sockets are driven by a custom `pa_mainloop_api` registered in the epoll loop. |
+| Network | NetworkManager D-Bus | `PropertiesChanged` on the daemon, device and access point. |
+| Bluetooth | BlueZ D-Bus | `PropertiesChanged` → `GetManagedObjects` re-enumeration. |
+| Recorder | `/proc` scan | 2 Hz detection while idle (with a pid→name cache); ~25 Hz only while a recorder is running, driving the red pulse. |
+| Clock | `timerfd(CLOCK_REALTIME)` | Absolute deadline on the minute, `TFD_TIMER_CANCEL_ON_SET` so clock jumps resync. |
+| CPU / GPU | hover-gated `timerfd` | `/proc/stat`, hwmon, cpufreq, GPU sysfs/NVML — opened only while the tooltip is on screen. |
+| Resume | login1 D-Bus | `PrepareForSleep(false)` refreshes every source. |
+
+### Idle cost
+
+On a quiet session the bar idles at well under 1 % of one core and around 30 MiB
+RSS. Wakeups come from the 1 Hz stats, the 2 Hz recorder check, the minute
+clock, and real events — a window rewriting its title ten times a second wakes
+the bar ten times a second, which is event handling rather than polling. Redraws
+are limited to the items that actually changed.
+
+## Project layout
+
+```
+src/
+  app/       event loop, source manager, compiled-in defaults, logging
+  model/     shared state structs
+  render/    Cairo renderer, text, intrinsic layout
+  sources/   Hyprland, power, pulse, network, bluetooth, recorder, clock, stats, GPU
+  wayland/   display, layer surface, shm canvas, pointer
+protocols/   wayland-scanner XML used to generate the client bindings
+hyprland/    example Hyprland snippet
+```
+
+## Known issues
+
+- **Bluetooth does not render yet.** The BlueZ `GetManagedObjects` parsing never
+  reports an adapter, so the item stays hidden. Everything else is unaffected.
+- **Recorder detection** covers `wl-screenrec`, `wf-recorder`,
+  `gpu-screen-recorder`, `kooha`, `wl-recorder` and `simplescreenrecorder`. OBS
+  is deliberately excluded, because its process exists even when it is not
+  recording.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

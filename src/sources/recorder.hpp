@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -42,6 +43,11 @@ class RecorderSource : public Source {
   int pulse_ms_ = 1500;
   int anim_ms_ = 0;
   int tick_ = 0;
+  // pid -> process name cache. Reading /proc/<pid>/comm for every process on
+  // every poll is ~1000 extra syscalls/second; names only change when a pid is
+  // recycled, so reuse them and do a full refresh occasionally.
+  std::map<int, std::string> names_;
+  int rescans_ = 0;
 };
 
 }  // namespace pillbar

@@ -144,11 +144,21 @@ void HyprlandSource::on_event() {
 void HyprlandSource::handle_line(const std::string& line) {
   const std::size_t sep = line.find(">>");
   const std::string event = sep == std::string::npos ? line : line.substr(0, sep);
+  // Events that only change the active window / its title: re-query just
+  // j/activewindow. A terminal that rewrites its title ten times a second
+  // otherwise triggers four socket queries per update.
+  static const char* kWindowOnly[] = {"activewindow", "activewindowv2", "fullscreen",
+                                      "changefloatingmode", "urgent"};
+  for (const char* name : kWindowOnly) {
+    if (event == name) {
+      requery_window();
+      return;
+    }
+  }
   static const char* kRelevant[] = {
-      "workspace",         "workspacev2",    "focusedmon",        "activewindow",
-      "activewindowv2",    "openwindow",     "closewindow",       "movewindow",
-      "createworkspace",   "destroyworkspace", "monitoradded",    "monitorremoved",
-      "fullscreen",        "changefloatingmode", "urgent"};
+      "workspace",         "workspacev2",    "focusedmon",        "openwindow",
+      "closewindow",       "movewindow",     "createworkspace",   "destroyworkspace",
+      "monitoradded",      "monitorremoved"};
   for (const char* name : kRelevant) {
     if (event == name) {
       requery();
@@ -267,7 +277,17 @@ void HyprlandSource::requery() {
     if (notify_) notify_(Item::Workspaces);
   }
 
-  // Active window.
+  update_window();
+}
+
+// Query only j/activewindow; used for events that cannot change workspaces.
+void HyprlandSource::requery_window() {
+  if (command_path_.empty()) return;
+  update_window();
+}
+
+void HyprlandSource::update_window() {
+  std::string error;
   const JsonValue window = json_parse(request("j/activewindow"), &error);
   WindowState win;
   if (window.is_object()) {
