@@ -9,10 +9,6 @@ namespace {
 const PixelGlyph kBluetooth = {
     {"..#..", "..##.", ".#.#.", "#..##", ".#.#.", "..##.", "..#.."}};
 
-const PixelGlyph kGem = {
-    {"....#....", "...#.#...", "..#.#.#..", ".#.....#.", "#...#...#",
-     ".#.....#.", "..#...#..", "...#.#...", "....#...."}};
-
 const PixelGlyph kCpu = {
     {"#.#.#.#.#", ".........", "..#####..", "#.#...#.#", "#.#...#.#",
      "#.#...#.#", "..#####..", ".........", "#.#.#.#.#"}};
@@ -26,7 +22,6 @@ void fill_pixel(cairo_t* cr, double x, double y, double px, const Color& color) 
 }  // namespace
 
 const PixelGlyph& bluetooth() { return kBluetooth; }
-const PixelGlyph& gem() { return kGem; }
 const PixelGlyph& cpu() { return kCpu; }
 
 double glyph_aspect(const PixelGlyph& glyph) {

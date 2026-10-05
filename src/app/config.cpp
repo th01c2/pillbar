@@ -173,6 +173,7 @@ Config config_load(const std::string& path, bool* used_defaults) {
   config.wifi_levels = get_string_array(table, "icons.wifi", config.wifi_levels);
   config.wifi_off = get_string(table, "icons.wifi_off", config.wifi_off);
   config.wifi_wired = get_string(table, "icons.wifi_wired", config.wifi_wired);
+  config.window_glyph = get_string(table, "icons.window", config.window_glyph);
 
   config.text = get_color(table, "colors.text", config.text);
   config.dim = get_color(table, "colors.dim", config.dim);

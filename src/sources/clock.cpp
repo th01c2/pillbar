@@ -34,6 +34,7 @@ void ClockSource::refresh() {
 void ClockSource::update() {
   ClockState next;
   now(&next.hour, &next.minute, nullptr);
+  LOG_DEBUG("clock: %02d:%02d", next.hour, next.minute);
   if (next == state_.clock) return;
   state_.clock = next;
   if (notify_) notify_(Item::Clock);
@@ -57,4 +58,3 @@ void ClockSource::on_fire() {
 }
 
 }  // namespace pillbar
-

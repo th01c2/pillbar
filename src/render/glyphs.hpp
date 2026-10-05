@@ -18,7 +18,6 @@ struct PixelGlyph {
 };
 
 const PixelGlyph& bluetooth();
-const PixelGlyph& gem();
 const PixelGlyph& cpu();
 
 // Draws a glyph with top-left at (x, y), each bitmap pixel being `px` logical

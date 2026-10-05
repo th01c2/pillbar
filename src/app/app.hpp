@@ -12,6 +12,7 @@
 #include "render/renderer.hpp"
 #include "sources/audio.hpp"
 #include "sources/bluetooth.hpp"
+#include "sources/clock.hpp"
 #include "sources/dbus.hpp"
 #include "sources/gpu.hpp"
 #include "sources/hyprland.hpp"
@@ -102,6 +103,7 @@ class App {
   std::unique_ptr<SourceManager> sources_;
   std::unique_ptr<HyprlandSource> hyprland_;
   std::unique_ptr<AudioSource> audio_;
+  std::unique_ptr<ClockSource> clock_;
   std::unique_ptr<PowerSource> power_;
   std::unique_ptr<WifiSource> wifi_;
   std::unique_ptr<BluetoothSource> bluetooth_;

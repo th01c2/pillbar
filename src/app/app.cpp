@@ -149,6 +149,7 @@ void App::setup_sources() {
 
   hyprland_ = std::make_unique<HyprlandSource>(state_, notify, config_.min_workspaces, 15);
   audio_ = std::make_unique<AudioSource>(state_, notify);
+  clock_ = std::make_unique<ClockSource>(state_, notify);
   cpu_ = std::make_unique<CpuSource>(state_, notify);
   gpu_ = std::make_unique<GpuSource>(state_, notify);
   power_ = std::make_unique<PowerSource>(state_, notify);
@@ -161,6 +162,7 @@ void App::setup_sources() {
 
   sources_->add(hyprland_.get());
   sources_->add(audio_.get());
+  sources_->add(clock_.get());
   sources_->add(cpu_.get());
   sources_->add(gpu_.get());
   sources_->add(power_.get());

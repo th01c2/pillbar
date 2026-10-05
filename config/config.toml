@@ -47,6 +47,8 @@ volume_high = ""
 wifi = ["󰤟", "󰤢", "󰤥", "󰤨"]
 wifi_off = "󰤯"
 wifi_wired = "󰈀"
+# Window title icon.
+window = ""
 
 [colors]
 text = "#e6e6e6"

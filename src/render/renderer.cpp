@@ -254,11 +254,12 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       }
       case Item::ActiveWindow: {
         if (!state.window.present) break;
-        const double glyph_px = std::max(1.0, std::round((r.w * 0.022 / 9.0) * scale_) / scale_);
-        const double glyph_w = 9.0 * glyph_px;
-        const double glyph_h = 9.0 * glyph_px;
-        const double gy = center_y - glyph_h / 2.0;
-        glyphs::draw(cr, glyphs::gem(), r.x, gy, glyph_px, config_->window_icon);
+        double glyph_w = 0.0;
+        if (!config_->window_glyph.empty()) {
+          glyph_w = icon_text_.measure(config_->window_glyph);
+          icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, config_->window_glyph,
+                                 config_->window_icon);
+        }
         const double text_x = r.x + glyph_w + layout.bar_w * 0.010;
         const double max_w = static_cast<double>(r.x + r.w) - text_x;
         const std::string title =

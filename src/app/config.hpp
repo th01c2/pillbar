@@ -63,6 +63,7 @@ struct Config {
                                        "\U000F0928"};
   std::string wifi_off = "\U000F092F";
   std::string wifi_wired = "\U000F0200";
+  std::string window_glyph = "\uEA85";
 
   // --- palette ---
   Color text{0.902, 0.902, 0.902, 1.0};      // #e6e6e6
