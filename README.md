@@ -36,7 +36,7 @@ runtime, no config file.
 | Bluetooth | Glyph | BlueZ D-Bus enumeration. |
 | Workspaces | Numerals | Only workspaces holding windows or focused, so the item grows as you open more. Left click switches, scroll goes prev/next. |
 | Window | App name + title | Title capped at 20 characters, UTF-8 safe; the app name is drawn in a dimmer shade. |
-| Recorder | Pulsing red dot | Appears only while a screen recorder runs; left click stops it. |
+| Recorder | Pulsing red dot | Driven by Hyprland's `screencast` events — no polling. Appears only for real capture sessions (screenshots are filtered out); left click stops known recorders. |
 | Clock | `HH:MM` | Minute-boundary timer; tooltip adds the date, live seconds and CPU/GPU. |
 
 ## Requirements
@@ -159,7 +159,7 @@ Color recorder_color_dim = rgb(0x7a0d08);
 | Volume | PulseAudio `pa_context_subscribe` | libpulse sockets are driven by a custom `pa_mainloop_api` registered in the epoll loop. |
 | Network | NetworkManager D-Bus | `PropertiesChanged` on the daemon, device and access point. |
 | Bluetooth | BlueZ D-Bus | `PropertiesChanged` → `GetManagedObjects` re-enumeration. |
-| Recorder | `/proc` scan | 2 Hz detection while idle (with a pid→name cache); ~25 Hz only while a recorder is running, driving the red pulse. |
+| Recorder | Hyprland `screencast`/`screencastv2` events | Fully event-driven: the bar sleeps until a screencopy session starts. A short confirmation window filters one-shot screenshots, and one `/proc` sweep at the start of a recording finds the pid so the icon can stop it. The 25 Hz timer only runs while the red dot pulses. |
 | Clock | `timerfd(CLOCK_REALTIME)` | Absolute deadline on the minute, `TFD_TIMER_CANCEL_ON_SET` so clock jumps resync. |
 | CPU / GPU | hover-gated `timerfd` | `/proc/stat`, hwmon, cpufreq, GPU sysfs/NVML — opened only while the tooltip is on screen. |
 | Resume | login1 D-Bus | `PrepareForSleep(false)` refreshes every source. |
@@ -167,10 +167,10 @@ Color recorder_color_dim = rgb(0x7a0d08);
 ### Idle cost
 
 On a quiet session the bar idles at well under 1 % of one core and around 30 MiB
-RSS. Wakeups come from the 1 Hz stats, the 2 Hz recorder check, the minute
-clock, and real events — a window rewriting its title ten times a second wakes
-the bar ten times a second, which is event handling rather than polling. Redraws
-are limited to the items that actually changed.
+RSS. Wakeups come from the minute clock, hover-gated sampling, and real events —
+a window rewriting its title ten times a second wakes the bar ten times a
+second, which is event handling rather than polling. Redraws are limited to the
+items that actually changed.
 
 ## Project layout
 
@@ -189,10 +189,9 @@ hyprland/    example Hyprland snippet
 
 - **Bluetooth does not render yet.** The BlueZ `GetManagedObjects` parsing never
   reports an adapter, so the item stays hidden. Everything else is unaffected.
-- **Recorder detection** covers `wl-screenrec`, `wf-recorder`,
-  `gpu-screen-recorder`, `kooha`, `wl-recorder` and `simplescreenrecorder`. OBS
-  is deliberately excluded, because its process exists even when it is not
-  recording.
+- **Recorder stop-on-click** works for `wl-screenrec`, `wf-recorder`,
+  `gpu-screen-recorder`, `kooha`, `wl-recorder` and `simplescreenrecorder`
+  (the indicator itself shows up for any capture session, regardless of tool).
 
 ## License
 

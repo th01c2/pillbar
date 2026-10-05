@@ -144,6 +144,25 @@ void HyprlandSource::on_event() {
 void HyprlandSource::handle_line(const std::string& line) {
   const std::size_t sep = line.find(">>");
   const std::string event = sep == std::string::npos ? line : line.substr(0, sep);
+  const std::string payload = sep == std::string::npos ? std::string() : line.substr(sep + 2);
+
+  // `screencast>>1,monitor` / `screencastv2>>0,window,<title>`: state, kind and
+  // optionally the captured monitor or window. Drives the recorder indicator
+  // without any polling.
+  if (event == "screencast" || event == "screencastv2") {
+    const std::size_t first = payload.find(',');
+    const std::string state = payload.substr(0, first);
+    std::string target;
+    if (first != std::string::npos) {
+      const std::size_t second = payload.find(',', first + 1);
+      target = payload.substr(first + 1,
+                              second == std::string::npos ? std::string::npos : second - first - 1);
+      if (second != std::string::npos) target += " " + payload.substr(second + 1);
+    }
+    if (on_screencast) on_screencast(state != "0", target);
+    return;
+  }
+
   // Events that only change the active window / its title: re-query just
   // j/activewindow. A terminal that rewrites its title ten times a second
   // otherwise triggers four socket queries per update.

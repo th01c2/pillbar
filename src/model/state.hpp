@@ -116,6 +116,7 @@ struct ClockState {
 struct RecorderState {
   bool active = false;
   std::string process;  // e.g. "wl-screenrec"
+  std::string target;   // "monitor eDP-1", "window <title>", ...
   int pid = 0;
   double pulse = 0.0;   // 0 = dark red, 1 = bright red
   bool operator==(const RecorderState&) const = default;

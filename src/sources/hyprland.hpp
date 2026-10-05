@@ -28,6 +28,10 @@ class HyprlandSource : public Source {
   void dispatch_workspace(int id);
   void dispatch_workspace_relative(int delta);
 
+  // Fired for Hyprland's `screencast` events: (active, target) where target is
+  // the monitor name or the captured window, when Hyprland reports it.
+  std::function<void(bool, const std::string&)> on_screencast;
+
  private:
   bool connect_event();
   void close_event();

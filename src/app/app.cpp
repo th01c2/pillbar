@@ -152,6 +152,11 @@ void App::setup_sources() {
   login1_ = std::make_unique<Login1Source>(dbus_, [this]() {
     if (sources_) sources_->refresh_all();
   });
+  if (hyprland_ && recorder_) {
+    hyprland_->on_screencast = [this](bool active, const std::string& target) {
+      recorder_->set_screencast(active, target);
+    };
+  }
 
   sources_->add(hyprland_.get());
   sources_->add(audio_.get());

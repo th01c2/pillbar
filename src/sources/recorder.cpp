@@ -3,9 +3,8 @@
 #include <dirent.h>
 #include <signal.h>
 
-#include <cstdlib>
 #include <cmath>
-#include <cstring>
+#include <cstdlib>
 
 #include "app/logging.hpp"
 #include "sources/sysfs.hpp"
@@ -14,9 +13,14 @@ namespace pillbar {
 namespace {
 
 constexpr double kPi = 3.14159265358979323846;
+constexpr int kAnimMs = 40;     // ~25 fps while the indicator pulses
+constexpr int kPendingMs = 100; // tick while deciding if a session is a recording
+constexpr int kScanAfterMs = 300;
+// A screencopy session that is still alive after this long is a recording.
+// Screenshots (grim and friends) close their session in well under a second.
+constexpr int kConfirmMs = 1200;
 
-// Process names (as seen in /proc/<pid>/comm) that mean "screen recording is
-// running". obs is deliberately absent: its process exists without recording.
+// Processes we are willing to SIGTERM for the click-to-stop action.
 const char* const kRecorders[] = {
     "wl-screenrec", "wf-recorder", "gpu-screen-recorder", "kooha",
     "wl-recorder",  "simplescreenrecorder",
@@ -36,17 +40,29 @@ std::string read_comm(int pid) {
   return text;
 }
 
-}  // namespace
-
-// 0 at the ends, 1 in the middle: a smooth dark -> bright -> dark breath.
-double RecorderSource::pulse_at(int ms) const {
-  const double phase =
-      std::fmod(static_cast<double>(ms), static_cast<double>(pulse_ms_)) / pulse_ms_;
-  return 0.5 - 0.5 * std::cos(2.0 * kPi * phase);
+// One /proc sweep, only when a recording actually starts. Returns the recorder
+// pids (usually exactly one) so the indicator can stop them on click.
+std::vector<int> scan_recorder_pids(std::string* first_name) {
+  std::vector<int> pids;
+  DIR* dir = ::opendir("/proc");
+  if (dir == nullptr) return pids;
+  while (dirent* entry = ::readdir(dir)) {
+    if (entry->d_name[0] < '0' || entry->d_name[0] > '9') continue;
+    const int pid = std::atoi(entry->d_name);
+    if (pid <= 0) continue;
+    const std::string name = read_comm(pid);
+    if (!is_recorder_name(name)) continue;
+    if (first_name != nullptr && first_name->empty()) *first_name = name;
+    pids.push_back(pid);
+  }
+  ::closedir(dir);
+  return pids;
 }
 
+}  // namespace
+
 RecorderSource::RecorderSource(AppState& state, NotifyFn notify, int pulse_ms)
-    : state_(state), notify_(std::move(notify)), pulse_ms_(pulse_ms > 0 ? pulse_ms : 1500) {}
+    : state_(state), notify_(std::move(notify)), pulse_ms_(pulse_ms > 0 ? pulse_ms : 2000) {}
 
 bool RecorderSource::start(EventLoop& loop) {
   if (!timer_.valid()) return false;
@@ -54,83 +70,101 @@ bool RecorderSource::start(EventLoop& loop) {
     timer_.consume();
     on_tick();
   });
-  rescan();
-  timer_.arm_relative_ms(kDetectMs, true);
+  // No polling timer: the Hyprland event stream drives everything. The timer is
+  // armed only for the confirmation delay and the pulse animation.
+  timer_.disarm();
   return true;
 }
 
-void RecorderSource::refresh() { rescan(); }
-
-// Drives both the animation and the process detection. While idle it wakes
-// twice a second just to notice a recorder starting; while recording it runs at
-// ~25 fps to animate the icon and re-checks processes less often.
-void RecorderSource::on_tick() {
-  ++tick_;
-  const bool recording = state_.recorder.active;
-  if (!recording) {
-    rescan();
-    timer_.arm_relative_ms(kDetectMs, true);
+void RecorderSource::set_screencast(bool active, const std::string& target) {
+  if (active) {
+    if (phase_ == Phase::Recording || phase_ == Phase::Pending) return;
+    target_ = target;
+    pending_ms_ = 0;
+    scanned_ = false;
+    phase_ = Phase::Pending;
+    timer_.arm_relative_ms(kPendingMs, true);
     return;
   }
 
-  anim_ms_ += kAnimMs;
-  if (tick_ % kDetectEveryTicks == 0) {
-    rescan();
-  } else {
-    RecorderState next = state_.recorder;
-    next.pulse = pulse_at(anim_ms_);
-    if (!(next == state_.recorder)) {
-      state_.recorder = next;
-      if (notify_) notify_(Item::Recorder);
+  if (phase_ == Phase::Pending) {
+    // Started and stopped inside the confirmation window: a screenshot, not a
+    // recording. Nothing was shown, so just go quiet again.
+    LOG_DEBUG("recorder: ignoring short screencopy session (%s)", target_.c_str());
+    phase_ = Phase::Idle;
+    timer_.disarm();
+    return;
+  }
+  if (phase_ == Phase::Recording) end_recording();
+}
+
+void RecorderSource::on_tick() {
+  if (phase_ == Phase::Pending) {
+    pending_ms_ += kPendingMs;
+    // Fast path: a known recorder process means it is really recording.
+    if (!scanned_ && pending_ms_ >= kScanAfterMs) {
+      scanned_ = true;
+      std::string process;
+      pids_ = scan_recorder_pids(&process);
+      if (!pids_.empty()) {
+        begin_recording(process);
+        return;
+      }
     }
+    // Slow path: no known process, so wait out a screenshot's short session.
+    if (pending_ms_ >= kConfirmMs) {
+      begin_recording(std::string());
+      return;
+    }
+    timer_.arm_relative_ms(kPendingMs, true);
+    return;
+  }
+  if (phase_ != Phase::Recording) return;
+
+  anim_ms_ += kAnimMs;
+  RecorderState next = state_.recorder;
+  next.pulse = pulse_at(anim_ms_);
+  if (!(next == state_.recorder)) {
+    state_.recorder = next;
+    if (notify_) notify_(Item::Recorder);
   }
   timer_.arm_relative_ms(kAnimMs, true);
 }
 
-void RecorderSource::rescan() {
+void RecorderSource::begin_recording(const std::string& process) {
+  phase_ = Phase::Recording;
+  anim_ms_ = 0;
+  LOG_DEBUG("recorder: started (%s%s%s, %zu pid(s))", target_.empty() ? "unknown target" : "target",
+            target_.empty() ? "" : " ", target_.c_str(), pids_.size());
+
   RecorderState next;
-  std::vector<int> pids;
-  // Full refresh every ~10s (at the idle 0.5s cadence) to survive pid reuse.
-  const bool full_refresh = (rescans_++ % 20) == 0;
-  std::map<int, std::string> names;
+  next.active = true;
+  next.pulse = pulse_at(0);
+  next.target = target_;
+  next.process = process;
+  next.pid = pids_.empty() ? 0 : pids_.front();
+  state_.recorder = next;
+  if (notify_) notify_(Item::Recorder);
+  timer_.arm_relative_ms(kAnimMs, true);
+}
 
-  DIR* dir = ::opendir("/proc");
-  if (dir == nullptr) return;
-  while (dirent* entry = ::readdir(dir)) {
-    if (entry->d_name[0] < '0' || entry->d_name[0] > '9') continue;
-    const int pid = std::atoi(entry->d_name);
-    if (pid <= 0) continue;
-    std::string name;
-    const auto cached = names_.find(pid);
-    if (!full_refresh && cached != names_.end()) {
-      name = cached->second;
-    } else {
-      name = read_comm(pid);
-    }
-    names[pid] = name;
-    if (!is_recorder_name(name)) continue;
-    if (next.process.empty()) {
-      next.process = name;
-      next.pid = pid;
-    }
-    pids.push_back(pid);
-  }
-  ::closedir(dir);
-  names_.swap(names);
-  next.active = !pids.empty();
-  next.pulse = next.active ? pulse_at(anim_ms_) : 0.0;
-  if (!next.active) {
-    anim_ms_ = 0;
-    tick_ = 0;
-  }
-  pids_ = std::move(pids);
-
+void RecorderSource::end_recording() {
+  phase_ = Phase::Idle;
+  pids_.clear();
+  timer_.disarm();
+  LOG_DEBUG("recorder: stopped");
+  RecorderState next;  // inactive
   if (!(next == state_.recorder)) {
-    LOG_DEBUG("recorder: %s (pid %d pulse %.2f)", next.active ? next.process.c_str() : "none",
-              next.pid, next.pulse);
     state_.recorder = next;
     if (notify_) notify_(Item::Recorder);
   }
+}
+
+// 0 at the ends, 1 in the middle: a smooth dark -> bright -> dark breath.
+double RecorderSource::pulse_at(int ms) const {
+  const double phase =
+      std::fmod(static_cast<double>(ms), static_cast<double>(pulse_ms_)) / pulse_ms_;
+  return 0.5 - 0.5 * std::cos(2.0 * kPi * phase);
 }
 
 bool RecorderSource::stop() {
@@ -146,12 +180,12 @@ std::vector<std::string> RecorderSource::detail() const {
   const RecorderState& rec = state_.recorder;
   if (!rec.active) {
     lines.push_back("Not recording");
-    lines.push_back("Left click to stop when recording");
     return lines;
   }
-  lines.push_back("Recording: " + rec.process);
-  lines.push_back("PID: " + std::to_string(rec.pid));
-  lines.push_back("Left click to stop");
+  lines.push_back("Recording" + (rec.target.empty() ? std::string() : ": " + rec.target));
+  if (!rec.process.empty()) lines.push_back("Process: " + rec.process);
+  if (rec.pid > 0) lines.push_back("PID: " + std::to_string(rec.pid));
+  lines.push_back(rec.pid > 0 ? "Left click to stop" : "Left click: nothing to stop");
   return lines;
 }
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <map>
 #include <string>
 #include <vector>
 
@@ -10,44 +9,50 @@
 
 namespace pillbar {
 
-// Screen-recorder watchdog. Instead of spawning `pgrep` on a timer (what the
-// waybar snippet does), it scans /proc directly for known recorder processes.
-// Cheap, no subprocesses, and it also records the pid so the icon can stop the
-// recording on click.
+// Screen-recorder indicator.
+//
+// Detection is event-driven, not polled: Hyprland broadcasts `screencast` /
+// `screencastv2` on its event socket whenever a screencopy session starts or
+// stops, so this source sleeps until that happens. A short confirmation delay
+// filters out one-shot screenshots (grim and friends use the same protocol for
+// a few milliseconds), and the only /proc access is a single lookup when a real
+// recording starts, to learn the pid for the click-to-stop action.
+//
+// The timer exists purely for the pulsing indicator animation while recording.
 class RecorderSource : public Source {
  public:
-  // `pulse_ms` is the dark-red -> bright-red -> dark-red cycle length.
   RecorderSource(AppState& state, NotifyFn notify, int pulse_ms);
 
   const char* name() const override { return "recorder"; }
   bool start(EventLoop& loop) override;
-  void refresh() override;
+  void refresh() override {}  // nothing to poll
 
   std::vector<std::string> detail() const;
-  // SIGTERM the detected recorder(s); returns false when nothing was running.
+  // SIGTERM the recorder process; false when it could not be identified.
   bool stop();
 
- private:
-  void on_tick();
-  void rescan();
-  double pulse_at(int ms) const;
+  // Fed by the Hyprland event stream: `target` is the monitor name or the
+  // captured window, as reported by screencastv2.
+  void set_screencast(bool active, const std::string& target);
 
-  static constexpr int kDetectMs = 500;         // idle wake-up period
-  static constexpr int kAnimMs = 40;            // ~25 fps while recording
-  static constexpr int kDetectEveryTicks = 12;  // re-check processes ~0.5s
+ private:
+  enum class Phase { Idle, Pending, Recording };
+
+  void on_tick();
+  void begin_recording(const std::string& process);
+  void end_recording();
+  double pulse_at(int ms) const;
 
   AppState& state_;
   NotifyFn notify_;
   TimerFd timer_;
-  std::vector<int> pids_;
-  int pulse_ms_ = 1500;
+  int pulse_ms_ = 2000;
   int anim_ms_ = 0;
-  int tick_ = 0;
-  // pid -> process name cache. Reading /proc/<pid>/comm for every process on
-  // every poll is ~1000 extra syscalls/second; names only change when a pid is
-  // recycled, so reuse them and do a full refresh occasionally.
-  std::map<int, std::string> names_;
-  int rescans_ = 0;
+  int pending_ms_ = 0;
+  Phase phase_ = Phase::Idle;
+  bool scanned_ = false;
+  std::string target_;
+  std::vector<int> pids_;
 };
 
 }  // namespace pillbar
