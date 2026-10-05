@@ -265,14 +265,20 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
     }
   }
 
-  double cursor = (static_cast<double>(layout.bar_w) - content) / 2.0;
-  if (cursor < kPillPad) cursor = kPillPad;
+  // Anchor the content in *screen* space, not pill space. Rounding the
+  // pill-local start and the pill origin separately makes the text flip by one
+  // pixel every frame while the pill width animates (visible as shivering);
+  // rounding the screen position once keeps the text perfectly still and lets
+  // the notch edges animate around it.
+  double cursor_screen = std::lround((static_cast<double>(output_w) - content) / 2.0);
+  const double min_screen = static_cast<double>(layout.screen_x) + kPillPad;
+  if (cursor_screen < min_screen) cursor_screen = min_screen;
   const double center_y = static_cast<double>(layout.bar_h) / 2.0;
   for (const Entry& entry : entries) {
-    const Rect rect{static_cast<int>(std::lround(cursor)), 0,
+    const Rect rect{static_cast<int>(std::lround(cursor_screen)) - layout.screen_x, 0,
                     std::max(1, static_cast<int>(std::lround(entry.width))), layout.bar_h};
     layout.items.push_back(ItemBox{entry.item, rect});
-    cursor += entry.width + kItemGap;
+    cursor_screen += entry.width + kItemGap;
   }
 
   std::size_t index = 0;

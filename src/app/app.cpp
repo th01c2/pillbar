@@ -251,7 +251,10 @@ void App::create_bar(Output& output) {
 
   bar->canvas = std::make_unique<Canvas>(display_.shm(), bar->surface->surface());
   bar->canvas->set_on_buffer_free([this, raw]() {
-    if (raw->configured) redraw_bar(*raw, raw->dirty == Item::None ? Item::All : raw->dirty);
+    // Only a pending (un-drawn) update needs a retry here. Redrawing on every
+    // buffer release unconditionally makes the bar render as fast as the
+    // compositor releases buffers (~800 fps), burning a whole CPU core.
+    if (raw->configured && raw->dirty != Item::None) redraw_bar(*raw, raw->dirty);
   });
 
   bar->tooltip_surface = std::make_unique<LayerSurface>(display_, &output, kLayerOverlay,
@@ -439,21 +442,40 @@ void App::redraw_bar(Bar& bar, Item items) {
   }
   cairo_scale(cr, bar.scale, bar.scale);
   renderer_.draw_bar(cr, bar.layout, state_);
+  // Only the pill accepts pointer input; the rest of the strip is click-through.
+  // Set the region before the buffer commit so one surface commit applies both,
+  // and only when the geometry actually moved (avoids a second compositor round
+  // trip on every animation frame).
+  if (bar.layout.screen_x != bar.input_x || bar.layout.bar_w != bar.input_w) {
+    bar.surface->set_input_rect(bar.layout.screen_x, 0, bar.layout.bar_w, bar.layout.bar_h);
+    bar.input_x = bar.layout.screen_x;
+    bar.input_w = bar.layout.bar_w;
+  }
   // The pill can change width/position, so redraw the whole (small) surface.
   bar.canvas->damage_all();
   bar.canvas->commit();
-  // Only the pill accepts pointer input; the rest of the strip is click-through.
-  bar.surface->set_input_rect(bar.layout.screen_x, 0, bar.layout.bar_w, bar.layout.bar_h);
-  bar.surface->commit();
   bar.dirty = Item::None;
 }
 
 void App::update_target_width(Bar& bar) {
   const double target = renderer_.desired_width(config_, state_, bar.output_w);
-  if (std::fabs(target - bar.pill_target) < 0.5) return;
+  // Titles that animate (spinners, progress) change the measured width by a
+  // few pixels every frame; ignore changes below this deadband so the notch
+  // does not sit there vibrating.
+  if (std::fabs(target - bar.pill_target) < 10.0) return;
   LOG_DEBUG("pill width target %.0f -> %.0f", bar.pill_target, target);
   bar.pill_target = target;
+  // Too small to be worth animating: snap to it.
+  if (std::fabs(target - bar.pill_w) <= 4.0) {
+    bar.pill_w = target;
+    bar.animating = false;
+    bar.anim_timer.disarm();
+    redraw_bar(bar, Item::All);
+    return;
+  }
   if (!bar.anim_timer.valid()) return;
+  bar.anim_from = bar.pill_w;
+  bar.anim_start = std::chrono::steady_clock::now();
   if (!bar.animating) {
     bar.animating = true;
     bar.anim_timer.arm_relative_ms(16, false);
@@ -461,14 +483,21 @@ void App::update_target_width(Bar& bar) {
 }
 
 void App::on_anim_tick(Bar& bar) {
-  const double diff = bar.pill_target - bar.pill_w;
-  if (std::fabs(diff) < 0.5) {
+  // Fixed-duration ease-out: the exponential approach used before had a long
+  // sub-pixel tail, which made the text look like it was shivering for a few
+  // hundred milliseconds after every resize.
+  constexpr double kDurationSeconds = 0.16;
+  const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                                       bar.anim_start)
+                             .count();
+  double progress = elapsed / kDurationSeconds;
+  if (progress >= 1.0) progress = 1.0;
+  const double eased = 1.0 - std::pow(1.0 - progress, 3.0);
+  bar.pill_w = bar.anim_from + (bar.pill_target - bar.anim_from) * eased;
+  if (progress >= 1.0) {
     bar.pill_w = bar.pill_target;
     bar.animating = false;
     bar.anim_timer.disarm();
-    LOG_DEBUG("pill width settled at %.0f", bar.pill_w);
-  } else {
-    bar.pill_w += diff * 0.25;
   }
   redraw_bar(bar, Item::All);
 }

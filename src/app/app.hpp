@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -40,7 +41,11 @@ struct Bar {
   BarLayout layout;
   double pill_w = 0.0;       // animated pill width
   double pill_target = 0.0;  // width the pill is animating toward
+  double anim_from = 0.0;    // width the current animation started from
+  std::chrono::steady_clock::time_point anim_start;
   int surface_w = 0;         // configured surface width (full output width)
+  int input_x = -1;          // last applied input-region rect
+  int input_w = -1;
   int bar_h = 0;
   double scale = 1.0;
   bool configured = false;
