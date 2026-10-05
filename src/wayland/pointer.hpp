@@ -7,6 +7,11 @@
 
 #include "app/event_loop.hpp"
 
+struct wl_compositor;
+struct wl_shm;
+struct wl_cursor;
+struct wl_cursor_theme;
+
 namespace pillbar {
 
 // wl_pointer wrapper. Translates enter/motion/leave/button/axis into
@@ -19,6 +24,12 @@ class Pointer {
   Pointer& operator=(const Pointer&) = delete;
 
   void attach(wl_seat* seat, EventLoop* loop);
+  // Creates the cursor surface and prepares themed cursors. Required before
+  // set_cursor() does anything.
+  void configure(wl_compositor* compositor, wl_shm* shm, int size_px = 24);
+  // Swaps between the theme's "pointer" (hand) and "default" cursors while the
+  // pointer is over one of our surfaces. `scale` picks the cursor pixel size.
+  void set_cursor(bool hand, double scale);
 
   std::function<void(wl_surface*, double, double)> on_enter;
   std::function<void(wl_surface*, double, double)> on_motion;
@@ -55,9 +66,20 @@ class Pointer {
   wl_seat* seat_ = nullptr;
   wl_pointer* pointer_ = nullptr;
   wl_surface* focus_ = nullptr;
+  wl_compositor* compositor_ = nullptr;
+  wl_shm* shm_ = nullptr;
+  wl_surface* cursor_surface_ = nullptr;
+  wl_cursor_theme* cursor_theme_ = nullptr;
+  wl_cursor* cursor_arrow_ = nullptr;
+  wl_cursor* cursor_hand_ = nullptr;
+  int cursor_size_ = 0;
+  int cursor_scale_ = 0;
+  int cursor_base_px_ = 24;
+  std::uint32_t enter_serial_ = 0;
+  bool hand_active_ = false;
+  wl_surface* cursor_focus_ = nullptr;  // surface the cursor was last set for
   double x_ = 0.0;
   double y_ = 0.0;
 };
 
 }  // namespace pillbar
-

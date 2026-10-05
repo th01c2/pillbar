@@ -123,6 +123,7 @@ void App::setup_pointer_callbacks() {
     LOG_WARN("no wl_pointer; hover/clicks disabled");
     return;
   }
+  pointer->configure(display_.compositor(), display_.shm(), config_.cursor_size_px);
   pointer->on_enter = [this](wl_surface* s, double x, double y) { on_pointer_enter(s, x, y); };
   pointer->on_motion = [this](wl_surface* s, double x, double y) { on_pointer_motion(s, x, y); };
   pointer->on_leave = [this](wl_surface* s) { on_pointer_leave(s); };
@@ -342,14 +343,27 @@ Item App::hit_test(Bar& bar, double x, double y) {
     if (x < box.rect.x || x > box.rect.x + box.rect.w) continue;
     if (y < box.rect.y || y > box.rect.y + box.rect.h) continue;
     if (box.item == Item::Workspaces) {
+      // Only the numeral circles are buttons. The workspaces item spans a wide
+      // band between the icons and the window title; treating the whole band as
+      // a button makes passing over the empty space feel like the pointer is
+      // being dragged onto a workspace. Hover/click must land on a circle.
       double best = 1e9;
+      int best_index = -1;
       for (std::size_t i = 0; i < bar.layout.workspace_slots.size(); ++i) {
         const double dx = std::fabs(bar.layout.workspace_slots[i].cx - x);
         if (dx < best) {
           best = dx;
-          bar.hover_ws = static_cast<int>(i);
+          best_index = static_cast<int>(i);
         }
       }
+      if (best_index < 0) continue;
+      const double radius =
+          bar.layout.workspace_slots[static_cast<std::size_t>(best_index)].diameter / 2.0 + 3.0;
+      if (best > radius) {
+        bar.hover_ws = -1;
+        continue;  // between numerals: not a button
+      }
+      bar.hover_ws = best_index;
     }
     return box.item;
   }
@@ -364,6 +378,10 @@ void App::on_pointer_motion(wl_surface* surface, double x, double y) {
   Bar* bar = bar_for_surface(surface);
   if (bar == nullptr) return;
   const Item item = hit_test(*bar, x, y);
+  // Clickable items show the hand cursor, everything else the arrow.
+  if (Pointer* pointer = display_.pointer()) {
+    pointer->set_cursor(item == Item::Workspaces || item == Item::Recorder, bar->scale);
+  }
   if (item != bar->hover) {
     bar->hover = item;
     hide_tooltip(*bar);

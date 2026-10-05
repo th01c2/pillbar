@@ -15,6 +15,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
+pkg_check_modules(WAYLAND_CURSOR REQUIRED IMPORTED_TARGET wayland-cursor)
 pkg_check_modules(CAIRO REQUIRED IMPORTED_TARGET cairo)
 pkg_check_modules(PANGO REQUIRED IMPORTED_TARGET pangocairo)
 pkg_check_modules(SYSTEMD REQUIRED IMPORTED_TARGET libsystemd)
@@ -101,6 +102,7 @@ target_compile_options(pillbar PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(pillbar PRIVATE
   pillbar_protocols
   PkgConfig::WAYLAND_CLIENT
+  PkgConfig::WAYLAND_CURSOR
   PkgConfig::CAIRO
   PkgConfig::PANGO
   PkgConfig::SYSTEMD

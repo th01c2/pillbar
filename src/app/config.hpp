@@ -79,6 +79,10 @@ struct Config {
   // exist). While recording it pulses from dark red to bright red and back.
   std::string recorder_glyph = "\uEBA7";
   int recorder_pulse_ms = 2000;  // one dark -> bright -> dark cycle
+  // Cursor size in logical pixels for the hand cursor over clickable items
+  // (multiplied by the output scale internally, so it stays crisp on HiDPI).
+  // Tune this to match the compositor's cursor: 24 is small, 48 is large.
+  int cursor_size_px = 32;
   // Window title is truncated to this many characters before fitting.
   int window_title_max_chars = 20;
 
