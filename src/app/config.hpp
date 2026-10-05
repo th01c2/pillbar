@@ -13,6 +13,14 @@ struct Color {
   double a = 1.0;
 };
 
+// 0xRRGGBB (+ optional alpha) -> Color, so palette entries can be written as
+// the hex you see in a colour picker.
+constexpr Color rgb(unsigned int hex, double alpha = 1.0) {
+  return Color{static_cast<double>((hex >> 16) & 0xFFu) / 255.0,
+               static_cast<double>((hex >> 8) & 0xFFu) / 255.0,
+               static_cast<double>(hex & 0xFFu) / 255.0, alpha};
+}
+
 struct ItemSlot {
   bool enabled = true;
   double x0 = 0.0;  // fraction of bar width
@@ -31,9 +39,9 @@ struct Config {
   std::string namespace_name = "pillbar";
   std::string monitors = "all";     // all | primary
 
-  Color bar_color{0.0, 0.0, 0.0, 1.0};  // #000000
+  Color bar_color = rgb(0x100F0F);  // notch fill
   bool shadow = false;
-  Color shadow_color{0.0, 0.0, 0.0, 0.35};
+  Color shadow_color = rgb(0x000000, 0.35);
   double shadow_offset_px = 2.0;
   double shadow_blur_px = 6.0;
 
@@ -71,19 +79,19 @@ struct Config {
   int window_title_max_chars = 20;
 
   // --- palette ---
-  Color text{0.902, 0.902, 0.902, 1.0};      // #e6e6e6
-  Color dim{0.722, 0.722, 0.722, 1.0};       // #b8b8b8
-  Color ws_occupied{0.290, 0.290, 0.306, 1.0};  // #4a4a4e
+  Color text = rgb(0xe6e6e6);
+  Color dim = rgb(0xb8b8b8);
+  Color ws_occupied = rgb(0x4a4a4e);
   // Active workspace: a clearly distinct, soft periwinkle accent so it is easy
   // to spot (the reference #55555a was nearly identical to the occupied fill).
-  Color ws_focused{0.435, 0.498, 0.847, 1.0};    // #6f7fd8
-  Color ws_focused_text{1.0, 1.0, 1.0, 1.0};     // #ffffff
+  Color ws_focused = rgb(0x6f7fd8);
+  Color ws_focused_text = rgb(0xffffff);
   bool ws_focus_ring = false;                    // draw a ring around the active circle
-  Color ws_focus_ring_color{1.0, 1.0, 1.0, 1.0}; // #ffffff
-  Color battery_green{0.239, 0.863, 0.353, 1.0};  // #3ddc5a
-  Color battery_low{1.0, 0.333, 0.333, 1.0};      // #ff5555
-  Color window_icon{0.435, 0.498, 0.847, 1.0};    // #6f7fd8
-  Color speaker{0.902, 0.902, 0.902, 1.0};        // #e6e6e6
+  Color ws_focus_ring_color = rgb(0xffffff);
+  Color battery_green = rgb(0x3ddc5a);
+  Color battery_low = rgb(0xff5555);
+  Color window_icon = rgb(0x6f7fd8);
+  Color speaker = rgb(0xe6e6e6);
 
   // --- items ---
   std::vector<std::string> order{"battery", "volume", "wifi", "bluetooth",

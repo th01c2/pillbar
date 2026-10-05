@@ -8,6 +8,61 @@
 namespace pillbar {
 namespace {
 
+std::size_t utf8_sequence_length(unsigned char lead) {
+  if ((lead & 0x80u) == 0u) return 1;
+  if ((lead & 0xE0u) == 0xC0u) return 2;
+  if ((lead & 0xF0u) == 0xE0u) return 3;
+  if ((lead & 0xF8u) == 0xF0u) return 4;
+  return 0;  // invalid lead byte
+}
+
+// Replaces malformed UTF-8 sequences with U+FFFD so Pango never gets invalid
+// input (window titles are arbitrary bytes from other processes).
+std::string sanitize_utf8(const std::string& input) {
+  bool needs_fix = false;
+  const std::size_t length = input.size();
+  for (std::size_t i = 0; i < length;) {
+    const unsigned char lead = static_cast<unsigned char>(input[i]);
+    const std::size_t width = utf8_sequence_length(lead);
+    if (width == 0 || i + width > length) {
+      needs_fix = true;
+      break;
+    }
+    bool continuation_ok = true;
+    for (std::size_t k = 1; k < width; ++k) {
+      if ((static_cast<unsigned char>(input[i + k]) & 0xC0u) != 0x80u) {
+        continuation_ok = false;
+        break;
+      }
+    }
+    if (!continuation_ok) {
+      needs_fix = true;
+      break;
+    }
+    i += width;
+  }
+  if (!needs_fix) return input;
+
+  std::string out;
+  out.reserve(input.size());
+  for (std::size_t i = 0; i < length;) {
+    const unsigned char lead = static_cast<unsigned char>(input[i]);
+    const std::size_t width = utf8_sequence_length(lead);
+    bool ok = width != 0 && i + width <= length;
+    for (std::size_t k = 1; ok && k < width; ++k) {
+      if ((static_cast<unsigned char>(input[i + k]) & 0xC0u) != 0x80u) ok = false;
+    }
+    if (ok) {
+      out.append(input, i, width);
+      i += width;
+    } else {
+      out += "\uFFFD";
+      ++i;
+    }
+  }
+  return out;
+}
+
 std::string join_families(const std::vector<std::string>& families) {
   std::string joined;
   for (std::size_t i = 0; i < families.size(); ++i) {
@@ -68,7 +123,8 @@ double TextRenderer::measure(const std::string& text) const {
   cairo_t* cr = cairo_create(surface);
   PangoLayout* layout =
       make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, nullptr);
-  pango_layout_set_text(layout, text.c_str(), -1);
+  const std::string safe = sanitize_utf8(text);
+  pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};
   pango_layout_get_pixel_extents(layout, &ink, nullptr);
   const double width = ink.width;
@@ -83,7 +139,8 @@ double TextRenderer::ink_height(const std::string& text) const {
   cairo_t* cr = cairo_create(surface);
   PangoLayout* layout =
       make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, nullptr);
-  pango_layout_set_text(layout, text.c_str(), -1);
+  const std::string safe = sanitize_utf8(text);
+  pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};
   pango_layout_get_pixel_extents(layout, &ink, nullptr);
   const double height = ink.height;
@@ -99,7 +156,8 @@ void TextRenderer::draw_left(cairo_t* cr, double x, double center_y, const std::
   PangoContext* ctx = nullptr;
   PangoLayout* layout =
       make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, &ctx);
-  pango_layout_set_text(layout, text.c_str(), -1);
+  const std::string safe = sanitize_utf8(text);
+  pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};
   pango_layout_get_pixel_extents(layout, &ink, nullptr);
   cairo_set_source_rgba(cr, color.r, color.g, color.b, color.a);
@@ -118,7 +176,8 @@ void TextRenderer::draw_center(cairo_t* cr, double center_x, double center_y,
   PangoContext* ctx = nullptr;
   PangoLayout* layout =
       make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, &ctx);
-  pango_layout_set_text(layout, text.c_str(), -1);
+  const std::string safe = sanitize_utf8(text);
+  pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};
   pango_layout_get_pixel_extents(layout, &ink, nullptr);
   cairo_set_source_rgba(cr, color.r, color.g, color.b, color.a);
