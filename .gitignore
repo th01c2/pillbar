@@ -1,14 +1,29 @@
+# Build directories (cmake/ninja output, nix build result)
 /build/
-/build-clang/
 /build-*/
 /result
 /result-*
+compile_commands.json
 
+# Compiled objects, libraries and binaries — never commit these
 *.o
 *.a
 *.so
 *.so.*
-compile_commands.json
+*.dylib
+*.dll
+*.exe
+*.out
+/pillbar
+/pillbar-*
+*.bin
+*.elf
+
+# Editor / tooling / OS noise
 .cache/
 .direnv/
-
+.clangd/
+*.swp
+*.swo
+*~
+.DS_Store

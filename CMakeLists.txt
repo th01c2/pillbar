@@ -53,6 +53,8 @@ pillbar_generate_protocol("wlr-layer-shell-unstable-v1.xml" "wlr-layer-shell-uns
 pillbar_generate_protocol("xdg-output-unstable-v1.xml" "xdg-output-unstable-v1-client-protocol")
 pillbar_generate_protocol("fractional-scale-v1.xml" "fractional-scale-v1-client-protocol")
 pillbar_generate_protocol("viewporter.xml" "viewporter-client-protocol")
+# wlr-layer-shell's generated client code references xdg_popup_interface, so
+# xdg-shell must be generated and linked even though no source uses it directly.
 pillbar_generate_protocol("xdg-shell.xml" "xdg-shell-client-protocol")
 
 add_library(pillbar_protocols STATIC ${PILLBAR_PROTO_SOURCES})
@@ -66,7 +68,6 @@ set(PILLBAR_SOURCES
   src/app/logging.cpp
   src/app/config.cpp
   src/app/event_loop.cpp
-  src/model/state.cpp
   src/wayland/display.cpp
   src/wayland/shm.cpp
   src/wayland/output.cpp
