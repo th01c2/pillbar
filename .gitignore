@@ -1,0 +1,14 @@
+/build/
+/build-clang/
+/build-*/
+/result
+/result-*
+
+*.o
+*.a
+*.so
+*.so.*
+compile_commands.json
+.cache/
+.direnv/
+

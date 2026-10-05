@@ -1,0 +1,118 @@
+# pillbar configuration. Copy to ~/.config/pillbar/config.toml
+# Every value below is the built-in default; live-reloaded via inotify on save.
+
+[bar]
+# Pill width as a fraction of the output width, height in logical pixels.
+# Reference look: ~26% wide / 30px tall. The default is widened slightly so the
+# added Wi-Fi and Bluetooth glyphs fit while keeping the pill proportions.
+width_frac = 0.30
+height_px = 30.0
+# Top margin as a fraction of the output height (~1.2% => ~10px at 814p).
+margin_top_frac = 0.012
+# background | bottom | top | overlay
+layer = "top"
+namespace = "pillbar"
+# all | primary  (primary == first output, since Wayland exposes no primary flag)
+monitors = "all"
+# Flat opaque fill #202020.
+color = "#202020"
+# Optional very faint soft shadow; off by default.
+shadow = false
+shadow_color = "#000000"
+shadow_offset_px = 2.0
+shadow_blur_px = 6.0
+
+[font]
+# First available family wins; comma-joined into a Pango fallback list.
+# Antialiasing is forced NONE and hinting FULL for a crisp pixel look.
+families = ["Departure Mono", "Terminus", "Cozette", "monospace"]
+size_px = 12.0
+letter_spacing = 0.05
+
+[colors]
+text = "#e6e6e6"
+dim = "#b8b8b8"
+workspace_occupied = "#4a4a4e"
+# Active workspace fill and numeral. The default is a soft periwinkle accent so
+# the workspace you are on is obvious; set a lighter gray (e.g. "#8a8a94") for a
+# subtler look, or use "#6f7fd8" to match the window icon.
+workspace_focused = "#6f7fd8"
+workspace_focused_text = "#ffffff"
+workspace_focus_ring = "#ffffff"
+battery_green = "#3ddc5a"
+battery_low = "#ff5555"
+window_icon = "#6f7fd8"
+speaker = "#e6e6e6"
+bar = "#202020"
+
+[items]
+# Left-to-right order. Remove an entry to hide it entirely.
+order = ["battery", "volume", "wifi", "bluetooth", "workspaces", "window", "clock"]
+
+# x0/x1 are fractions of the pill width. The five reference groups keep their
+# proportions; wifi/bluetooth are inserted and the pill widened slightly.
+[items.battery]
+x0 = 0.055
+x1 = 0.155
+enabled = true
+
+[items.volume]
+x0 = 0.185
+x1 = 0.285
+enabled = true
+
+[items.wifi]
+x0 = 0.318
+x1 = 0.340
+enabled = true
+
+[items.bluetooth]
+x0 = 0.350
+x1 = 0.372
+enabled = true
+
+[items.workspaces]
+# Numerals spread evenly across this span: 1 2 3 4 5 (+ more only if occupied).
+x0 = 0.400
+x1 = 0.700
+enabled = true
+
+[items.window]
+x0 = 0.730
+x1 = 0.845
+enabled = true
+
+[items.clock]
+x0 = 0.875
+x1 = 0.960
+enabled = true
+
+# Optional CPU/GPU bar items (also shown in the clock/system tooltip).
+[items.cpu]
+x0 = 0.260
+x1 = 0.300
+enabled = false
+
+[items.gpu]
+x0 = 0.300
+x1 = 0.340
+enabled = false
+
+[tooltip]
+# Hover delay before the tooltip fades in, and the fade frame interval.
+delay_ms = 250
+radius_px = 8.0
+# Vertical gap between the pill bottom and the tooltip.
+gap_px = 6.0
+pad_px = 8.0
+font_size_px = 11.0
+
+[behavior]
+# Include CPU/GPU stats in the clock tooltip (hover-gated sampling).
+system_item_tooltip = true
+# Always show at least this many workspace numerals; more only if occupied.
+min_workspaces = 5
+# Draw a ring around the active workspace circle for extra clarity.
+workspace_focus_ring = false
+# strftime format used for the clock tooltip; live seconds while hovering.
+clock_tooltip_format = "%A, %d %B %Y  %H:%M:%S"
