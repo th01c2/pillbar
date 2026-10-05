@@ -77,9 +77,10 @@ PangoLayout* make_layout(cairo_t* cr, const std::string& family, double size_px,
                          double letter_spacing, bool antialias, PangoContext** ctx_out) {
   PangoContext* ctx = pango_cairo_create_context(cr);
   cairo_font_options_t* options = cairo_font_options_create();
-  cairo_font_options_set_antialias(options, antialias ? CAIRO_ANTIALIAS_DEFAULT
-                                                      : CAIRO_ANTIALIAS_NONE);
-  cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_FULL);
+  cairo_font_options_set_antialias(options,
+                                   antialias ? CAIRO_ANTIALIAS_GRAY : CAIRO_ANTIALIAS_NONE);
+  cairo_font_options_set_hint_style(options, antialias ? CAIRO_HINT_STYLE_SLIGHT
+                                                       : CAIRO_HINT_STYLE_FULL);
   cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_ON);
   pango_cairo_context_set_font_options(ctx, options);
   cairo_font_options_destroy(options);

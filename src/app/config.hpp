@@ -47,6 +47,9 @@ struct Config {
 
   // --- typography ---
   std::vector<std::string> fonts{"Departure Mono", "Terminus", "Cozette", "monospace"};
+  // Anti-alias the text. The intended bitmap/pixel fonts want this off, but the
+  // fallback families are vector fonts, where AA-off looks ragged at 12px.
+  bool smooth_text = true;
   // Separate family list for Nerd Font icon glyphs, since the text families
   // above are bitmap/pixel fonts without Nerd Font symbols.
   std::vector<std::string> icon_fonts{"Symbols Nerd Font", "JetBrainsMono Nerd Font",

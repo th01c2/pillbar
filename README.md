@@ -71,17 +71,24 @@ cmake --build build -j
 ### From your own NixOS flake
 
 ```nix
-inputs.pillbar.url = "github:YOURUSER/Sebar";
+inputs.pillbar.url = "github:th01c2/pillbar";
 
 # ...
 environment.systemPackages = [ inputs.pillbar.packages.${pkgs.system}.default ];
 ```
 
+Or run it straight from the flake without adding it anywhere:
+
+```sh
+nix run github:th01c2/pillbar
+nix build github:th01c2/pillbar   # produces ./result/bin/pillbar
+```
+
 Time-savers:
 
 - While developing, point the input at your checkout —
-  `url = "path:/home/you/Sebar"` — and `nixos-rebuild` picks up the working tree
-  without committing.
+  `url = "path:/home/sebastian/Sebar"` — and `nixos-rebuild` picks up the working
+  tree without committing.
 - With a `github:` input, run `nix flake update pillbar` after pushing, or the
   lock file keeps you on the previous commit.
 - `nix build` only copies files tracked by git, so **new source files must be

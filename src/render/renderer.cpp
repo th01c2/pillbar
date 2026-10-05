@@ -206,7 +206,8 @@ double item_width(const Renderer& renderer, const Config& config, const AppState
 
 void Renderer::configure(const Config& config) {
   config_ = &config;
-  text_.configure(config.fonts, config.font_size_px, config.letter_spacing);
+  text_.configure(config.fonts, config.font_size_px, config.letter_spacing,
+                  config.smooth_text);
   icon_text_.configure(config.icon_fonts,
                        std::max(1.0, config.height_px * config.icon_size_frac), 0.0,
                        /*antialias=*/true);
@@ -359,7 +360,8 @@ void Renderer::draw_tooltip(cairo_t* cr, const std::vector<std::string>& lines, 
   cairo_fill(cr);
 
   TextRenderer tooltip_text;
-  tooltip_text.configure(config_->fonts, config_->tooltip_font_size_px, config_->letter_spacing);
+  tooltip_text.configure(config_->fonts, config_->tooltip_font_size_px,
+                         config_->letter_spacing, config_->smooth_text);
   double y = config_->tooltip_pad_px + metrics.line_height / 2.0;
   for (const std::string& line : lines) {
     Color color = config_->text;
@@ -403,7 +405,9 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
   }
   cairo_fill(cr);
 
-  cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+  // Item shapes (the workspace circles) are anti-aliased; text and icons set
+  // their own font options, so this only affects the vector drawing.
+  cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
   const double center_y = layout.bar_h / 2.0;
 
   for (const ItemBox& box : layout.items) {

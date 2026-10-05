@@ -1,5 +1,5 @@
 {
-  description = "pillbar - floating pill-shaped Wayland status bar for Hyprland";
+  description = "pillbar - notch-style status bar for Hyprland (Wayland, C++/Cairo)";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -13,6 +13,15 @@
       packages = forAllSystems (pkgs: rec {
         pillbar = pkgs.callPackage ./default.nix { };
         default = pillbar;
+      });
+
+      # `nix run github:th01c2/pillbar` starts the bar.
+      apps = forAllSystems (pkgs: {
+        default = {
+          type = "app";
+          program = "${self.packages.${pkgs.stdenv.hostPlatform.system}.pillbar}/bin/pillbar";
+          meta.description = "Run the pillbar status bar";
+        };
       });
 
       devShells = forAllSystems (pkgs: {
