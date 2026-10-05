@@ -13,7 +13,8 @@ namespace pillbar {
 // pixel fonts stay crisp. All coordinates are logical pixels.
 class TextRenderer {
  public:
-  void configure(const std::vector<std::string>& families, double size_px, double letter_spacing);
+  void configure(const std::vector<std::string>& families, double size_px, double letter_spacing,
+                 bool antialias = false);
 
   double size_px() const { return size_px_; }
   // Width of the inked text in logical pixels.
@@ -32,7 +33,7 @@ class TextRenderer {
   mutable std::vector<std::string> families_;
   double size_px_ = 12.0;
   double letter_spacing_ = 0.05;
+  bool antialias_ = false;
 };
 
 }  // namespace pillbar
-

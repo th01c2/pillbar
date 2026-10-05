@@ -40,6 +40,7 @@ class Renderer {
  private:
   const Config* config_ = nullptr;
   TextRenderer text_;
+  TextRenderer icon_text_;
   double scale_ = 1.0;
 };
 

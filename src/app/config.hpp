@@ -36,8 +36,33 @@ struct Config {
 
   // --- typography ---
   std::vector<std::string> fonts{"Departure Mono", "Terminus", "Cozette", "monospace"};
+  // Separate family list for Nerd Font icon glyphs, since the text families
+  // above are bitmap/pixel fonts without Nerd Font symbols.
+  std::vector<std::string> icon_fonts{"Symbols Nerd Font", "JetBrainsMono Nerd Font",
+                                      "FiraCode Nerd Font", "Hack Nerd Font", "monospace"};
+  // Icon glyph size as a fraction of the bar height.
+  double icon_size_frac = 0.58;
   double font_size_px = 12.0;
   double letter_spacing = 0.05;  // +5%
+
+  // --- nerd font icons ---
+  // Battery level icons for 0%,10%,...,100% (index 0..10).
+  std::vector<std::string> battery_levels{
+      "\U000F0083", "\U000F007A", "\U000F007B", "\U000F007C", "\U000F007D", "\U000F007E",
+      "\U000F007F", "\U000F0080", "\U000F0081", "\U000F0082", "\U000F0079"};
+  // Charging battery icons for 0%,10%,...,100% (index 0..10).
+  std::vector<std::string> battery_charging{
+      "\U000F0085", "\U000F089C", "\U000F0086", "\U000F0087", "\U000F0088", "\U000F089D",
+      "\U000F0089", "\U000F089E", "\U000F008A", "\U000F008B", "\U000F12A4"};
+  std::string volume_muted = "\uEEE8";
+  std::string volume_low = "\uF027";
+  std::string volume_medium = "\uEFCF";
+  std::string volume_high = "\uF028";
+  // Wi-Fi signal strength for levels 1..4, plus off/disconnected and wired.
+  std::vector<std::string> wifi_levels{"\U000F091F", "\U000F0922", "\U000F0925",
+                                       "\U000F0928"};
+  std::string wifi_off = "\U000F092F";
+  std::string wifi_wired = "\U000F0200";
 
   // --- palette ---
   Color text{0.902, 0.902, 0.902, 1.0};      // #e6e6e6

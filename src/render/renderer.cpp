@@ -41,11 +41,42 @@ std::string format_clock(const ClockState& clock) {
   return buffer;
 }
 
+int battery_icon_index(int percent) { return std::clamp((percent + 5) / 10, 0, 10); }
+
+std::string battery_icon(const Config& config, const BatteryState& battery) {
+  const bool charging = battery.charging || battery.full;
+  const std::vector<std::string>& set =
+      charging ? config.battery_charging : config.battery_levels;
+  if (set.empty()) return {};
+  const std::size_t index =
+      std::min<std::size_t>(static_cast<std::size_t>(battery_icon_index(battery.percent)),
+                            set.size() - 1);
+  return set[index];
+}
+
+std::string volume_icon(const Config& config, const VolumeState& volume) {
+  if (volume.muted) return config.volume_muted;
+  if (volume.percent < 34) return config.volume_low;
+  if (volume.percent < 67) return config.volume_medium;
+  return config.volume_high;
+}
+
+std::string wifi_icon(const Config& config, const WifiState& wifi) {
+  if (!wifi.connected) return config.wifi_off;
+  if (config.wifi_levels.empty()) return config.wifi_off;
+  const int level = std::clamp((wifi.signal + 12) / 25, 1,
+                               static_cast<int>(config.wifi_levels.size()));
+  return config.wifi_levels[static_cast<std::size_t>(level) - 1];
+}
+
 }  // namespace
 
 void Renderer::configure(const Config& config) {
   config_ = &config;
   text_.configure(config.fonts, config.font_size_px, config.letter_spacing);
+  icon_text_.configure(config.icon_fonts,
+                       std::max(1.0, config.height_px * config.icon_size_frac), 0.0,
+                       /*antialias=*/true);
 }
 
 std::string Renderer::ellipsize(const std::string& input, double max_width) const {
@@ -130,24 +161,17 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
     switch (box.item) {
       case Item::Battery: {
         if (!state.battery.present) break;
-        const glyphs::PixelGlyph& glyph = glyphs::battery();
-        const double target_w = static_cast<double>(layout.bar_w) * 0.026;
-        const double glyph_px =
-            std::max(1.0 / scale_,
-                     std::round((target_w / static_cast<double>(glyph.width())) * scale_) / scale_);
-        const double glyph_w = static_cast<double>(glyph.width()) * glyph_px;
-        const double glyph_h = static_cast<double>(glyph.height()) * glyph_px;
-        const double gy = center_y - glyph_h / 2.0;
         Color color = config_->text;
         if (state.battery.charging) {
           color = config_->battery_green;
         } else if (state.battery.percent <= 15) {
           color = config_->battery_low;
         }
-        glyphs::draw(cr, glyph, r.x, gy, glyph_px, color);
-        if (state.battery.charging) {
-          glyphs::draw(cr, glyphs::bolt(), r.x + glyph_w * 0.68, gy, glyph_px * 0.9,
-                       config_->battery_green);
+        const std::string glyph = battery_icon(*config_, state.battery);
+        double glyph_w = 0.0;
+        if (!glyph.empty()) {
+          glyph_w = icon_text_.measure(glyph);
+          icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, color);
         }
         const double text_x = r.x + glyph_w + layout.bar_w * 0.010;
         text_.draw_left(cr, text_x, center_y, format_percent(state.battery.percent), color);
@@ -155,17 +179,13 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       }
       case Item::Volume: {
         if (!state.volume.available) break;
-        const glyphs::PixelGlyph& glyph =
-            state.volume.muted ? glyphs::speaker_muted() : glyphs::speaker();
-        const double target_w = static_cast<double>(layout.bar_w) * 0.021;
-        const double glyph_px =
-            std::max(1.0 / scale_,
-                     std::round((target_w / static_cast<double>(glyph.width())) * scale_) / scale_);
-        const double glyph_w = static_cast<double>(glyph.width()) * glyph_px;
-        const double glyph_h = static_cast<double>(glyph.height()) * glyph_px;
-        const double gy = center_y - glyph_h / 2.0;
-        glyphs::draw(cr, glyph, r.x, gy, glyph_px,
-                     state.volume.muted ? config_->dim : config_->speaker);
+        const Color icon_color = state.volume.muted ? config_->dim : config_->speaker;
+        const std::string glyph = volume_icon(*config_, state.volume);
+        double glyph_w = 0.0;
+        if (!glyph.empty()) {
+          glyph_w = icon_text_.measure(glyph);
+          icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, icon_color);
+        }
         const double text_x = r.x + glyph_w + layout.bar_w * 0.010;
         const std::string label =
             state.volume.muted ? "muted" : format_percent(state.volume.percent);
@@ -175,15 +195,9 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       }
       case Item::Wifi: {
         if (!state.wifi.present) break;
-        // The wifi slot is narrower than the glyph needs to read clearly, so
-        // draw at bar height and center it in the slot instead of clamping to
-        // the slot width.
-        const double box = layout.bar_h * 0.66;
-        const int bars =
-            state.wifi.connected ? std::clamp((state.wifi.signal + 24) / 25, 1, 4) : 0;
-        const double wx = static_cast<double>(r.x) + (static_cast<double>(r.w) - box) / 2.0;
-        glyphs::draw_wifi(cr, wx, center_y - box / 2.0, box, bars, state.wifi.connected,
-                          config_->text, config_->dim);
+        const std::string glyph = wifi_icon(*config_, state.wifi);
+        const Color icon_color = state.wifi.connected ? config_->text : config_->dim;
+        icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, glyph, icon_color);
         break;
       }
       case Item::Bluetooth: {

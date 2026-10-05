@@ -19,10 +19,11 @@ std::string join_families(const std::vector<std::string>& families) {
 
 // Builds a layout with AA disabled and full hinting.
 PangoLayout* make_layout(cairo_t* cr, const std::string& family, double size_px,
-                         double letter_spacing, PangoContext** ctx_out) {
+                         double letter_spacing, bool antialias, PangoContext** ctx_out) {
   PangoContext* ctx = pango_cairo_create_context(cr);
   cairo_font_options_t* options = cairo_font_options_create();
-  cairo_font_options_set_antialias(options, CAIRO_ANTIALIAS_NONE);
+  cairo_font_options_set_antialias(options, antialias ? CAIRO_ANTIALIAS_DEFAULT
+                                                      : CAIRO_ANTIALIAS_NONE);
   cairo_font_options_set_hint_style(options, CAIRO_HINT_STYLE_FULL);
   cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_ON);
   pango_cairo_context_set_font_options(ctx, options);
@@ -53,11 +54,12 @@ PangoLayout* make_layout(cairo_t* cr, const std::string& family, double size_px,
 }  // namespace
 
 void TextRenderer::configure(const std::vector<std::string>& families, double size_px,
-                             double letter_spacing) {
+                             double letter_spacing, bool antialias) {
   families_ = families;
   if (families_.empty()) families_ = {"monospace"};
   size_px_ = size_px > 0.0 ? size_px : 12.0;
   letter_spacing_ = letter_spacing;
+  antialias_ = antialias;
 }
 
 double TextRenderer::measure(const std::string& text) const {
@@ -65,7 +67,7 @@ double TextRenderer::measure(const std::string& text) const {
   cairo_surface_t* surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
   cairo_t* cr = cairo_create(surface);
   PangoLayout* layout =
-      make_layout(cr, join_families(families_), size_px_, letter_spacing_, nullptr);
+      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, nullptr);
   pango_layout_set_text(layout, text.c_str(), -1);
   PangoRectangle ink{};
   pango_layout_get_pixel_extents(layout, &ink, nullptr);
@@ -80,7 +82,7 @@ double TextRenderer::ink_height(const std::string& text) const {
   cairo_surface_t* surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
   cairo_t* cr = cairo_create(surface);
   PangoLayout* layout =
-      make_layout(cr, join_families(families_), size_px_, letter_spacing_, nullptr);
+      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, nullptr);
   pango_layout_set_text(layout, text.c_str(), -1);
   PangoRectangle ink{};
   pango_layout_get_pixel_extents(layout, &ink, nullptr);
@@ -96,7 +98,7 @@ void TextRenderer::draw_left(cairo_t* cr, double x, double center_y, const std::
   if (text.empty()) return;
   PangoContext* ctx = nullptr;
   PangoLayout* layout =
-      make_layout(cr, join_families(families_), size_px_, letter_spacing_, &ctx);
+      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, &ctx);
   pango_layout_set_text(layout, text.c_str(), -1);
   PangoRectangle ink{};
   pango_layout_get_pixel_extents(layout, &ink, nullptr);
@@ -115,7 +117,7 @@ void TextRenderer::draw_center(cairo_t* cr, double center_x, double center_y,
   if (text.empty()) return;
   PangoContext* ctx = nullptr;
   PangoLayout* layout =
-      make_layout(cr, join_families(families_), size_px_, letter_spacing_, &ctx);
+      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, &ctx);
   pango_layout_set_text(layout, text.c_str(), -1);
   PangoRectangle ink{};
   pango_layout_get_pixel_extents(layout, &ink, nullptr);

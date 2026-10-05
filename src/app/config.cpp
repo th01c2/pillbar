@@ -158,8 +158,21 @@ Config config_load(const std::string& path, bool* used_defaults) {
   config.shadow_blur_px = get_double(table, "bar.shadow_blur_px", config.shadow_blur_px);
 
   config.fonts = get_string_array(table, "font.families", config.fonts);
+  config.icon_fonts = get_string_array(table, "font.icon_families", config.icon_fonts);
+  config.icon_size_frac = get_double(table, "font.icon_size_frac", config.icon_size_frac);
   config.font_size_px = get_double(table, "font.size_px", config.font_size_px);
   config.letter_spacing = get_double(table, "font.letter_spacing", config.letter_spacing);
+
+  config.battery_levels = get_string_array(table, "icons.battery", config.battery_levels);
+  config.battery_charging =
+      get_string_array(table, "icons.battery_charging", config.battery_charging);
+  config.volume_muted = get_string(table, "icons.volume_muted", config.volume_muted);
+  config.volume_low = get_string(table, "icons.volume_low", config.volume_low);
+  config.volume_medium = get_string(table, "icons.volume_medium", config.volume_medium);
+  config.volume_high = get_string(table, "icons.volume_high", config.volume_high);
+  config.wifi_levels = get_string_array(table, "icons.wifi", config.wifi_levels);
+  config.wifi_off = get_string(table, "icons.wifi_off", config.wifi_off);
+  config.wifi_wired = get_string(table, "icons.wifi_wired", config.wifi_wired);
 
   config.text = get_color(table, "colors.text", config.text);
   config.dim = get_color(table, "colors.dim", config.dim);

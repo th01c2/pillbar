@@ -26,8 +26,27 @@ shadow_blur_px = 6.0
 # First available family wins; comma-joined into a Pango fallback list.
 # Antialiasing is forced NONE and hinting FULL for a crisp pixel look.
 families = ["Departure Mono", "Terminus", "Cozette", "monospace"]
+# Nerd Font families used for the battery/volume/wifi icons. The text families
+# above are pixel fonts without Nerd Font symbols, so icons use this list.
+icon_families = ["Symbols Nerd Font", "JetBrainsMono Nerd Font", "FiraCode Nerd Font", "Hack Nerd Font", "monospace"]
+# Icon glyph size as a fraction of the bar height.
+icon_size_frac = 0.58
 size_px = 12.0
 letter_spacing = 0.05
+
+[icons]
+# Battery icons for 0,10,20,...,100 percent.
+battery = ["󰂃", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+# Charging battery icons for 0,10,20,...,100 percent.
+battery_charging = ["󰂅", "󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󱊤"]
+volume_muted = ""
+volume_low = ""
+volume_medium = ""
+volume_high = ""
+# Wi-Fi signal strength 1..4.
+wifi = ["󰤟", "󰤢", "󰤥", "󰤨"]
+wifi_off = "󰤯"
+wifi_wired = "󰈀"
 
 [colors]
 text = "#e6e6e6"
