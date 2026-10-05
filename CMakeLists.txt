@@ -89,6 +89,7 @@ set(PILLBAR_SOURCES
   src/sources/gpu.cpp
   src/sources/login1.cpp
   src/sources/manager.cpp
+  src/sources/recorder.cpp
 )
 
 add_executable(pillbar ${PILLBAR_SOURCES})

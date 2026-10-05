@@ -19,6 +19,7 @@
 #include "sources/login1.hpp"
 #include "sources/manager.hpp"
 #include "sources/power.hpp"
+#include "sources/recorder.hpp"
 #include "sources/stats.hpp"
 #include "sources/wifi.hpp"
 #include "wayland/display.hpp"
@@ -113,6 +114,7 @@ class App {
   std::unique_ptr<AudioSource> audio_;
   std::unique_ptr<ClockSource> clock_;
   std::unique_ptr<PowerSource> power_;
+  std::unique_ptr<RecorderSource> recorder_;
   std::unique_ptr<WifiSource> wifi_;
   std::unique_ptr<BluetoothSource> bluetooth_;
   std::unique_ptr<CpuSource> cpu_;

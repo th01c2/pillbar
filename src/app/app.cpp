@@ -144,6 +144,7 @@ void App::setup_sources() {
   cpu_ = std::make_unique<CpuSource>(state_, notify);
   gpu_ = std::make_unique<GpuSource>(state_, notify);
   power_ = std::make_unique<PowerSource>(state_, notify);
+  recorder_ = std::make_unique<RecorderSource>(state_, notify, config_.recorder_pulse_ms);
   dbus_.open_system(loop_);
   wifi_ = std::make_unique<WifiSource>(state_, notify, dbus_);
   bluetooth_ = std::make_unique<BluetoothSource>(state_, notify, dbus_);
@@ -157,6 +158,7 @@ void App::setup_sources() {
   sources_->add(cpu_.get());
   sources_->add(gpu_.get());
   sources_->add(power_.get());
+  sources_->add(recorder_.get());
   sources_->add(wifi_.get());
   sources_->add(bluetooth_.get());
   sources_->add(login1_.get());
@@ -394,6 +396,8 @@ void App::on_pointer_button(wl_surface* surface, std::uint32_t button, double x,
     }
   } else if (item == Item::Volume && button == 0x112 /* BTN_MIDDLE */) {
     if (audio_) audio_->toggle_mute();
+  } else if (item == Item::Recorder && button == 0x110 /* BTN_LEFT */) {
+    if (recorder_) recorder_->stop();
   }
 }
 
@@ -551,6 +555,9 @@ std::vector<std::string> App::tooltip_lines(Item item, Bar& bar) const {
       break;
     case Item::Bluetooth:
       lines = bluetooth_ ? bluetooth_->detail() : std::vector<std::string>{"Bluetooth unavailable"};
+      break;
+    case Item::Recorder:
+      lines = recorder_ ? recorder_->detail() : std::vector<std::string>{"Recorder unavailable"};
       break;
     case Item::Workspaces: {
       const int state_index =

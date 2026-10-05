@@ -127,6 +127,7 @@ Item item_of(const std::string& name) {
   if (name == "bluetooth") return Item::Bluetooth;
   if (name == "workspaces") return Item::Workspaces;
   if (name == "window") return Item::ActiveWindow;
+  if (name == "recorder") return Item::Recorder;
   if (name == "clock") return Item::Clock;
   if (name == "cpu") return Item::Cpu;
   if (name == "gpu") return Item::Gpu;
@@ -193,6 +194,9 @@ double item_width(const Renderer& renderer, const Config& config, const AppState
     }
     case Item::Clock:
       return renderer.text_width(format_clock(state.clock));
+    case Item::Recorder:
+      if (!state.recorder.active) return -1.0;
+      return renderer.icon_width(config.recorder_glyph);
     default:
       return -1.0;
   }
@@ -520,6 +524,17 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       case Item::Clock: {
         const double center_x = r.x + r.w / 2.0;
         text_.draw_center(cr, center_x, center_y, format_clock(state.clock), config_->text);
+        break;
+      }
+      case Item::Recorder: {
+        if (!state.recorder.active || config_->recorder_glyph.empty()) break;
+        // Pulse between dark red and bright red.
+        const double p = std::clamp(state.recorder.pulse, 0.0, 1.0);
+        const Color& dim = config_->recorder_color_dim;
+        const Color& bright = config_->recorder_color;
+        const Color color{dim.r + (bright.r - dim.r) * p, dim.g + (bright.g - dim.g) * p,
+                          dim.b + (bright.b - dim.b) * p, 1.0};
+        icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, config_->recorder_glyph, color);
         break;
       }
       case Item::Cpu: {

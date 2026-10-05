@@ -75,6 +75,10 @@ struct Config {
   std::string wifi_off = "\U000F092F";
   std::string wifi_wired = "\U000F0200";
   std::string window_glyph = "\uEA85";
+  // Screen-recorder indicator (nf-cod-record U+EBA7; U+EBFA and U+F044A also
+  // exist). While recording it pulses from dark red to bright red and back.
+  std::string recorder_glyph = "\uEBA7";
+  int recorder_pulse_ms = 2000;  // one dark -> bright -> dark cycle
   // Window title is truncated to this many characters before fitting.
   int window_title_max_chars = 20;
 
@@ -92,10 +96,12 @@ struct Config {
   Color battery_low = rgb(0xff5555);
   Color window_icon = rgb(0x6f7fd8);
   Color speaker = rgb(0xe6e6e6);
+  Color recorder_color = rgb(0xff3b30);
+  Color recorder_color_dim = rgb(0x7a0d08);
 
   // --- items ---
-  std::vector<std::string> order{"battery", "volume", "wifi", "bluetooth",
-                                 "workspaces", "window", "clock"};
+  std::vector<std::string> order{"battery", "volume", "wifi", "bluetooth", "workspaces",
+                                 "window",  "recorder", "clock"};
   std::map<std::string, ItemSlot> slots;
 
   // --- tooltip ---

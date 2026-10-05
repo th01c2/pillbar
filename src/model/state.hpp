@@ -19,6 +19,7 @@ enum class Item : std::uint32_t {
   Clock = 1u << 6,
   Cpu = 1u << 7,
   Gpu = 1u << 8,
+  Recorder = 1u << 9,
   All = 0xFFFFFFFFu,
 };
 
@@ -112,6 +113,14 @@ struct ClockState {
   bool operator==(const ClockState&) const = default;
 };
 
+struct RecorderState {
+  bool active = false;
+  std::string process;  // e.g. "wl-screenrec"
+  int pid = 0;
+  double pulse = 0.0;   // 0 = dark red, 1 = bright red
+  bool operator==(const RecorderState&) const = default;
+};
+
 struct CpuCoreState {
   double usage = 0.0;  // percent
   bool operator==(const CpuCoreState&) const = default;
@@ -148,6 +157,7 @@ struct AppState {
   ClockState clock;
   CpuState cpu;
   GpuState gpu;
+  RecorderState recorder;
 };
 
 }  // namespace pillbar
