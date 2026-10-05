@@ -175,10 +175,14 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       }
       case Item::Wifi: {
         if (!state.wifi.present) break;
-        const double box = std::min(static_cast<double>(r.w), layout.bar_h * 0.62);
+        // The wifi slot is narrower than the glyph needs to read clearly, so
+        // draw at bar height and center it in the slot instead of clamping to
+        // the slot width.
+        const double box = layout.bar_h * 0.66;
         const int bars =
             state.wifi.connected ? std::clamp((state.wifi.signal + 24) / 25, 1, 4) : 0;
-        glyphs::draw_wifi(cr, r.x, center_y - box / 2.0, box, bars, state.wifi.connected,
+        const double wx = static_cast<double>(r.x) + (static_cast<double>(r.w) - box) / 2.0;
+        glyphs::draw_wifi(cr, wx, center_y - box / 2.0, box, bars, state.wifi.connected,
                           config_->text, config_->dim);
         break;
       }

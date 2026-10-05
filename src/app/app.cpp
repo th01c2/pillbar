@@ -151,6 +151,7 @@ void App::setup_sources() {
   audio_ = std::make_unique<AudioSource>(state_, notify);
   cpu_ = std::make_unique<CpuSource>(state_, notify);
   gpu_ = std::make_unique<GpuSource>(state_, notify);
+  power_ = std::make_unique<PowerSource>(state_, notify);
   dbus_.open_system(loop_);
   wifi_ = std::make_unique<WifiSource>(state_, notify, dbus_);
   bluetooth_ = std::make_unique<BluetoothSource>(state_, notify, dbus_);
@@ -162,6 +163,7 @@ void App::setup_sources() {
   sources_->add(audio_.get());
   sources_->add(cpu_.get());
   sources_->add(gpu_.get());
+  sources_->add(power_.get());
   sources_->add(wifi_.get());
   sources_->add(bluetooth_.get());
   sources_->add(login1_.get());

@@ -102,6 +102,7 @@ class App {
   std::unique_ptr<SourceManager> sources_;
   std::unique_ptr<HyprlandSource> hyprland_;
   std::unique_ptr<AudioSource> audio_;
+  std::unique_ptr<PowerSource> power_;
   std::unique_ptr<WifiSource> wifi_;
   std::unique_ptr<BluetoothSource> bluetooth_;
   std::unique_ptr<CpuSource> cpu_;
@@ -117,4 +118,3 @@ class App {
 };
 
 }  // namespace pillbar
-
