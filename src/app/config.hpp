@@ -23,12 +23,15 @@ struct Config {
   // --- bar geometry ---
   double width_frac = 0.50;         // fraction of output width
   double height_px = 30.0;          // logical pixels
-  double margin_top_frac = 0.012;   // fraction of output height (~1.2%)
+  double margin_top_frac = 0.0;     // fraction of output height
+  // Notch shape: flush with the screen edge, rounded only on the bottom.
+  bool notch = true;
+  double notch_radius_px = 12.0;
   std::string layer = "top";        // background | bottom | top | overlay
   std::string namespace_name = "pillbar";
   std::string monitors = "all";     // all | primary
 
-  Color bar_color{0.1255, 0.1255, 0.1255, 1.0};  // #202020
+  Color bar_color{0.0, 0.0, 0.0, 1.0};  // #000000
   bool shadow = false;
   Color shadow_color{0.0, 0.0, 0.0, 0.35};
   double shadow_offset_px = 2.0;
@@ -65,7 +68,7 @@ struct Config {
   std::string wifi_wired = "\U000F0200";
   std::string window_glyph = "\uEA85";
   // Window title is truncated to this many characters before fitting.
-  int window_title_max_chars = 40;
+  int window_title_max_chars = 20;
 
   // --- palette ---
   Color text{0.902, 0.902, 0.902, 1.0};      // #e6e6e6
@@ -102,14 +105,5 @@ struct Config {
 
 // Fills default item slots matching the reference screenshot.
 void config_apply_default_slots(Config& config);
-
-// Returns the default config path: $XDG_CONFIG_HOME/pillbar/config.toml
-std::string config_default_path();
-
-// Loads config from `path`; on failure returns defaults and sets *used_defaults.
-Config config_load(const std::string& path, bool* used_defaults);
-
-Color color_from_hex(const std::string& hex, Color fallback);
-std::string color_to_hex(const Color& color);
 
 }  // namespace pillbar

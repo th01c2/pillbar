@@ -21,8 +21,38 @@ void rounded_rect(cairo_t* cr, double x, double y, double w, double h, double r)
   cairo_close_path(cr);
 }
 
+// Rectangle with only the bottom corners rounded, so it sits flush against the
+// screen edge (notch style).
+void notch_rect(cairo_t* cr, double x, double y, double w, double h, double r) {
+  const double radius = std::min(r, std::min(w / 2.0, h));
+  cairo_new_sub_path(cr);
+  cairo_move_to(cr, x, y);
+  cairo_line_to(cr, x + w, y);
+  cairo_line_to(cr, x + w, y + h - radius);
+  cairo_arc(cr, x + w - radius, y + h - radius, radius, 0.0, kPi / 2.0);
+  cairo_line_to(cr, x + radius, y + h);
+  cairo_arc(cr, x + radius, y + h - radius, radius, kPi / 2.0, kPi);
+  cairo_close_path(cr);
+}
+
 void set_color(cairo_t* cr, const Color& c, double alpha_mul = 1.0) {
   cairo_set_source_rgba(cr, c.r, c.g, c.b, c.a * alpha_mul);
+}
+
+// Length in bytes of the UTF-8 character starting at `index` (at least 1).
+std::size_t utf8_char_width(const std::string& input, std::size_t index) {
+  const unsigned char lead = static_cast<unsigned char>(input[index]);
+  std::size_t width = 1;
+  if ((lead & 0x80u) == 0u) {
+    width = 1;
+  } else if ((lead & 0xE0u) == 0xC0u) {
+    width = 2;
+  } else if ((lead & 0xF0u) == 0xE0u) {
+    width = 3;
+  } else if ((lead & 0xF8u) == 0xF0u) {
+    width = 4;
+  }
+  return std::min(width, input.size() - index);
 }
 
 // Truncates on UTF-8 boundaries; when cut, the last character becomes an
@@ -33,18 +63,7 @@ std::string truncate_chars(const std::string& input, int max_chars) {
   int count = 0;
   while (index < input.size()) {
     const std::size_t start = index;
-    const unsigned char lead = static_cast<unsigned char>(input[index]);
-    std::size_t width = 1;
-    if ((lead & 0x80u) == 0u) {
-      width = 1;
-    } else if ((lead & 0xE0u) == 0xC0u) {
-      width = 2;
-    } else if ((lead & 0xF0u) == 0xE0u) {
-      width = 3;
-    } else {
-      width = 4;
-    }
-    index += std::min(width, input.size() - index);
+    index += utf8_char_width(input, index);
     ++count;
     if (count == max_chars && index < input.size()) {
       return input.substr(0, start) + "\u2026";
@@ -99,7 +118,7 @@ constexpr double kPillPad = 14.0;      // left/right padding inside the pill
 constexpr double kItemGap = 12.0;      // space between items
 constexpr double kIconGap = 6.0;       // icon -> label inside an item
 constexpr double kNameTitleGap = 8.0;  // app name -> window title
-constexpr int kAppNameMaxChars = 24;
+constexpr int kAppNameMaxChars = 20;
 
 Item item_of(const std::string& name) {
   if (name == "battery") return Item::Battery;
@@ -115,11 +134,14 @@ Item item_of(const std::string& name) {
 }
 
 int workspace_count(const Config& config, const AppState& state) {
-  int count = config.min_workspaces > 0 ? config.min_workspaces : 5;
-  int max_id = 0;
-  for (const WorkspaceState& ws : state.workspaces.list) max_id = std::max(max_id, ws.id);
-  count = std::max(count, max_id);
-  return count > 0 ? count : 5;
+  (void)config;
+  // Only workspaces that hold windows, plus the one currently focused, so the
+  // item grows and shrinks with the number of workspaces actually in use.
+  int count = 0;
+  for (const WorkspaceState& ws : state.workspaces.list) {
+    if (ws.occupied || ws.focused) ++count;
+  }
+  return count;
 }
 
 std::string window_name_text(const WindowState& window) {
@@ -156,8 +178,10 @@ double item_width(const Renderer& renderer, const Config& config, const AppState
       if (!state.bluetooth.present) return -1.0;
       return config.height_px * 0.5;
     case Item::Workspaces: {
+      const int count = workspace_count(config, state);
+      if (count <= 0) return -1.0;
       const double diameter = std::min(20.0, config.height_px * 0.62);
-      return static_cast<double>(workspace_count(config, state)) * diameter * 1.35;
+      return static_cast<double>(count) * diameter * 1.35;
     }
     case Item::ActiveWindow: {
       if (!state.window.present) return -1.0;
@@ -255,24 +279,26 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
   for (const ItemBox& box : layout.items) {
     if (box.item != Item::Workspaces) continue;
     const int count = workspace_count(config, state);
-    const double diameter = std::min(20.0, std::min(static_cast<double>(box.rect.w) / count * 1.1,
-                                                    config.height_px * 0.62));
-    for (int i = 0; i < count; ++i, ++index) {
+    if (count <= 0) continue;
+    const double diameter =
+        std::min(20.0, std::min(static_cast<double>(box.rect.w) / count * 1.1,
+                                config.height_px * 0.62));
+    int shown = 0;
+    for (std::size_t state_index = 0; state_index < state.workspaces.list.size(); ++state_index) {
+      const WorkspaceState& ws = state.workspaces.list[state_index];
+      if (!ws.occupied && !ws.focused) continue;
       WorkspaceSlot slot;
       slot.cx = static_cast<double>(box.rect.x) +
-                (static_cast<double>(i) + 0.5) * static_cast<double>(box.rect.w) / count;
+                (static_cast<double>(shown) + 0.5) * static_cast<double>(box.rect.w) / count;
       slot.cy = center_y;
       slot.diameter = std::max(1.0, diameter);
-      if (index < state.workspaces.list.size()) {
-        slot.id = state.workspaces.list[index].id;
-        if (state.workspaces.list[index].focused) {
-          layout.workspace_focused_index = static_cast<int>(index);
-        }
-      } else {
-        slot.id = static_cast<int>(index) + 1;
-      }
+      slot.id = ws.id;
+      slot.state_index = static_cast<int>(state_index);
+      if (ws.focused) layout.workspace_focused_index = static_cast<int>(index);
       layout.workspace_slots.push_back(slot);
+      ++shown;
     }
+    index = layout.workspace_slots.size();
   }
   return layout;
 }
@@ -280,12 +306,15 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
 std::string Renderer::ellipsize(const std::string& input, double max_width) const {
   if (max_width <= 0.0) return {};
   if (text_.measure(input) <= max_width) return input;
-  const std::string dots = "...";
+  const std::string dots = "\u2026";
   std::string best;
-  for (std::size_t len = 1; len <= input.size(); ++len) {
+  // Walk character boundaries only: measuring or drawing a string cut in the
+  // middle of a UTF-8 sequence is invalid and makes Pango warn.
+  for (std::size_t len = 1; len <= input.size();) {
     const std::string candidate = input.substr(0, len) + dots;
     if (text_.measure(candidate) > max_width) break;
     best = candidate;
+    len += utf8_char_width(input, len);
   }
   return best.empty() ? dots : best;
 }
@@ -346,13 +375,22 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
     for (int i = 6; i >= 1; --i) {
       const double spread = static_cast<double>(i) * (config_->shadow_blur_px / 6.0);
       set_color(cr, config_->shadow_color, 1.0 / static_cast<double>(i + 2));
-      rounded_rect(cr, spread * 0.5, spread * 0.5 + config_->shadow_offset_px,
-                   layout.bar_w - spread, layout.bar_h - spread, radius);
+      if (config_->notch) {
+        notch_rect(cr, spread * 0.5, spread * 0.5 + config_->shadow_offset_px,
+                   layout.bar_w - spread, layout.bar_h - spread, config_->notch_radius_px);
+      } else {
+        rounded_rect(cr, spread * 0.5, spread * 0.5 + config_->shadow_offset_px,
+                     layout.bar_w - spread, layout.bar_h - spread, radius);
+      }
       cairo_fill(cr);
     }
   }
   set_color(cr, config_->bar_color);
-  rounded_rect(cr, 0, 0, layout.bar_w, layout.bar_h, radius);
+  if (config_->notch) {
+    notch_rect(cr, 0, 0, layout.bar_w, layout.bar_h, config_->notch_radius_px);
+  } else {
+    rounded_rect(cr, 0, 0, layout.bar_w, layout.bar_h, radius);
+  }
   cairo_fill(cr);
 
   cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -418,11 +456,13 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
         break;
       }
       case Item::Workspaces: {
-        for (std::size_t i = 0; i < layout.workspace_slots.size(); ++i) {
-          const WorkspaceSlot& slot = layout.workspace_slots[i];
-          const WorkspaceState* ws = i < state.workspaces.list.size() ? &state.workspaces.list[i]
-                                                                     : nullptr;
-          const int id = ws != nullptr ? ws->id : slot.id;
+        for (const WorkspaceSlot& slot : layout.workspace_slots) {
+          const bool valid = slot.state_index >= 0 &&
+                             static_cast<std::size_t>(slot.state_index) <
+                                 state.workspaces.list.size();
+          const WorkspaceState* ws =
+              valid ? &state.workspaces.list[static_cast<std::size_t>(slot.state_index)] : nullptr;
+          const int id = slot.id;
           const bool focused = ws != nullptr && ws->focused;
           const bool occupied = ws != nullptr && ws->occupied;
           // The focused workspace keeps its purple fill even when it holds no

@@ -12,13 +12,11 @@ once-per-minute clock tick.
 
 ## Layout assumption
 
-The reference screenshot anchors the five original groups at fixed percentages
-of the bar width. Adding the Wi-Fi and Bluetooth glyphs needs a little more
-room, so by default the pill is widened from ~26% to **30%** of the output width
-and the group fractions are shifted slightly (all values live in
-`config.toml` under `[items.*]`). Everything else matches the reference: stadium
-radius = height/2, ~30px tall, ~1.2% top margin, flat opaque `#202020`, pixel
-glyphs, AA-disabled text.
+The bar is a top-centred notch that reserves the strip it occupies (layer-shell
+exclusive zone) and sizes itself to its content: item widths are intrinsic
+(icon + text), and the notch animates wider/narrower when e.g. the window title
+changes length. All geometry, colours, fonts and icon glyphs are compiled into
+the binary; there is no config file.
 
 ## Build and run (NixOS)
 
@@ -50,11 +48,14 @@ Logging is controlled by `PILLBAR_LOG=error|warn|info|debug` (default `warn`).
 
 ## Configuration
 
-The config file is `$XDG_CONFIG_HOME/pillbar/config.toml` (default
-`~/.config/pillbar/config.toml`). Copy `config/config.toml` there. It is watched
-with inotify and reloaded live on save. Every option is documented in the file:
-bar geometry/colour/shadow, font family list + size + letter spacing, palette,
-per-item `x0`/`x1`/`enabled`, tooltip delay/radius/padding and behaviour toggles.
+There is no config file. Every setting is a compiled-in default in
+`src/app/config.hpp` (palette, fonts, icon glyphs, sizes) and
+`src/app/config.cpp` (item slots). Change a value there and rebuild:
+
+```sh
+nix build .#pillbar
+pkill -x pillbar; setsid -f ./result/bin/pillbar
+```
 
 ## Interactions
 

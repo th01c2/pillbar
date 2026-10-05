@@ -6,7 +6,6 @@
 
 #include "app/config.hpp"
 #include "app/event_loop.hpp"
-#include "app/inotify_watcher.hpp"
 #include "model/state.hpp"
 #include "render/layout.hpp"
 #include "render/renderer.hpp"
@@ -41,6 +40,7 @@ struct Bar {
   BarLayout layout;
   double pill_w = 0.0;       // animated pill width
   double pill_target = 0.0;  // width the pill is animating toward
+  int surface_w = 0;         // configured surface width (full output width)
   int bar_h = 0;
   double scale = 1.0;
   bool configured = false;
@@ -98,7 +98,6 @@ class App {
   void on_pointer_scroll(wl_surface* surface, int steps, double x, double y);
 
   Config config_;
-  std::string config_path_;
   AppState state_;
   EventLoop loop_;
   WaylandDisplay display_;
@@ -114,7 +113,6 @@ class App {
   std::unique_ptr<CpuSource> cpu_;
   std::unique_ptr<GpuSource> gpu_;
   std::unique_ptr<Login1Source> login1_;
-  std::unique_ptr<InotifyWatcher> config_watcher_;
   SignalFd signals_;
   TimerFd output_rebuild_timer_;
   TimerFd tooltip_seconds_timer_;

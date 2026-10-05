@@ -47,12 +47,9 @@ int App::run() {
 }
 
 bool App::init() {
-  config_path_ = config_default_path();
-  bool used_defaults = false;
-  config_ = config_load(config_path_, &used_defaults);
-  if (used_defaults) {
-    LOG_INFO("no config at %s; using defaults", config_path_.c_str());
-  }
+  // Built-in defaults only: pillbar deliberately has no config file.
+  config_ = Config{};
+  config_apply_default_slots(config_);
   renderer_.configure(config_);
 
   if (!display_.connect(loop_)) return false;
@@ -103,8 +100,6 @@ bool App::init() {
   redraw_all();
   display_.flush();
 
-  config_watcher_ = std::make_unique<InotifyWatcher>(
-      loop_, config_path_, [this]() { reload_config(); });
   return true;
 }
 
@@ -211,26 +206,34 @@ void App::create_bar(Output& output) {
   Bar* raw = bar.get();
   bar->surface = std::make_unique<LayerSurface>(display_, &output, kLayerTop,
                                                 config_.namespace_name, true);
+  // Anchor to both horizontal edges and let the compositor size the surface to
+  // the full output width; this is also what makes the exclusive zone below
+  // actually reserve the strip instead of being ignored.
   bar->surface->set_anchors(ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
-                            ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
+                            ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |
+                            ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT);
   bar->surface->set_margin(top, 0, 0, 0);
-  bar->surface->set_size(static_cast<std::uint32_t>(bar->output_w),
-                         static_cast<std::uint32_t>(bar->bar_h));
+  bar->surface->set_size(0, static_cast<std::uint32_t>(bar->bar_h));
   bar->surface->set_exclusive_zone(bar->bar_h + top);
-  bar->surface->on_configure = [this, raw](std::uint32_t, std::uint32_t) {
+  bar->surface->on_configure = [this, raw](std::uint32_t width, std::uint32_t height) {
+    LOG_DEBUG("bar configure: %ux%u", width, height);
     raw->configured = true;
+    if (height > 0) raw->bar_h = static_cast<int>(height);
+    if (width > 0) raw->surface_w = static_cast<int>(width);
+    if (raw->surface_w <= 0) raw->surface_w = raw->output_w;
     if (raw->canvas == nullptr) return;
-    raw->surface->set_destination(raw->output_w, raw->bar_h);
-    const int pw = std::max(1, static_cast<int>(std::lround(raw->output_w * raw->scale)));
+    raw->surface->set_destination(raw->surface_w, raw->bar_h);
+    const int pw = std::max(1, static_cast<int>(std::lround(raw->surface_w * raw->scale)));
     const int ph = std::max(1, static_cast<int>(std::lround(raw->bar_h * raw->scale)));
     raw->canvas->resize(pw, ph);
     redraw_bar(*raw, Item::All);
   };
   bar->surface->on_scale = [this, raw](double scale) {
     raw->scale = scale;
+    if (raw->surface_w <= 0) raw->surface_w = raw->output_w;
     if (raw->canvas == nullptr) return;
-    raw->surface->set_destination(raw->output_w, raw->bar_h);
-    const int pw = std::max(1, static_cast<int>(std::lround(raw->output_w * raw->scale)));
+    raw->surface->set_destination(raw->surface_w, raw->bar_h);
+    const int pw = std::max(1, static_cast<int>(std::lround(raw->surface_w * raw->scale)));
     const int ph = std::max(1, static_cast<int>(std::lround(raw->bar_h * raw->scale)));
     raw->canvas->resize(pw, ph);
     if (raw->tooltip_canvas != nullptr) {
@@ -256,8 +259,9 @@ void App::create_bar(Output& output) {
   bar->tooltip_surface->set_input_none();
   bar->tooltip_surface->set_anchors(ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
                                     ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
-  bar->tooltip_surface->set_margin(top + bar->bar_h + static_cast<int>(config_.tooltip_gap_px), 0, 0,
-                                   0);
+  // The notch reserves the top strip, and Hyprland offsets overlay surfaces by
+  // that reserved area, so the tooltip only needs the small gap margin here.
+  bar->tooltip_surface->set_margin(static_cast<int>(config_.tooltip_gap_px), 0, 0, 0);
   bar->tooltip_surface->set_size(static_cast<std::uint32_t>(bar->output_w),
                                  static_cast<std::uint32_t>(kTooltipSurfaceHeight));
   bar->tooltip_surface->set_destination(bar->output_w, kTooltipSurfaceHeight);
@@ -310,8 +314,8 @@ void App::destroy_bars() {
 }
 
 void App::reload_config() {
-  bool used_defaults = false;
-  config_ = config_load(config_path_, &used_defaults);
+  config_ = Config{};
+  config_apply_default_slots(config_);
   renderer_.configure(config_);
   rebuild_bars();
   redraw_all();
@@ -520,9 +524,14 @@ std::vector<std::string> App::tooltip_lines(Item item, Bar& bar) const {
       lines = bluetooth_ ? bluetooth_->detail() : std::vector<std::string>{"Bluetooth unavailable"};
       break;
     case Item::Workspaces: {
-      if (bar.hover_ws >= 0 &&
-          static_cast<std::size_t>(bar.hover_ws) < state_.workspaces.list.size()) {
-        const WorkspaceState& ws = state_.workspaces.list[bar.hover_ws];
+      const int state_index =
+          bar.hover_ws >= 0 && static_cast<std::size_t>(bar.hover_ws) <
+                                   bar.layout.workspace_slots.size()
+              ? bar.layout.workspace_slots[static_cast<std::size_t>(bar.hover_ws)].state_index
+              : -1;
+      if (state_index >= 0 &&
+          static_cast<std::size_t>(state_index) < state_.workspaces.list.size()) {
+        const WorkspaceState& ws = state_.workspaces.list[static_cast<std::size_t>(state_index)];
         lines.push_back("Workspace " + ws.name + " (id " + std::to_string(ws.id) + ")");
         lines.push_back("Windows: " + std::to_string(ws.windows));
         for (const std::string& cls : ws.classes) lines.push_back("  " + cls);

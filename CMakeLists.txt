@@ -65,8 +65,6 @@ set(PILLBAR_SOURCES
   src/app/logging.cpp
   src/app/config.cpp
   src/app/event_loop.cpp
-  src/app/inotify_watcher.cpp
-  src/app/toml.cpp
   src/model/state.cpp
   src/wayland/display.cpp
   src/wayland/shm.cpp
@@ -113,4 +111,3 @@ target_link_libraries(pillbar PRIVATE
 )
 
 install(TARGETS pillbar RUNTIME DESTINATION bin)
-install(FILES config/config.toml DESTINATION share/pillbar)

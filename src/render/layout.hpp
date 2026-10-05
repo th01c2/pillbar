@@ -15,6 +15,7 @@ struct ItemBox {
 
 struct WorkspaceSlot {
   int id = 0;
+  int state_index = -1;    // index into AppState::workspaces.list
   double cx = 0.0;         // bar-local logical pixels
   double cy = 0.0;
   double diameter = 0.0;
