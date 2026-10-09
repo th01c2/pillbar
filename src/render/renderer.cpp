@@ -445,7 +445,7 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
         Color color = config_->text;
         if (state.battery.charging) {
           color = config_->battery_green;
-        } else if (state.battery.percent <= 15) {
+        } else if (state.battery.percent <= config_->battery_low_percent) {
           color = config_->battery_low;
         }
         const std::string glyph = battery_icon(*config_, state.battery);

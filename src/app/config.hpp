@@ -39,7 +39,7 @@ struct Config {
   std::string namespace_name = "pillbar";
   std::string monitors = "all";     // all | primary
 
-  Color bar_color = rgb(0x100F0F);  // notch fill
+  Color bar_color = rgb(0x181818);  // notch fill
   bool shadow = false;
   Color shadow_color = rgb(0x000000, 0.35);
   double shadow_offset_px = 2.0;
@@ -105,14 +105,18 @@ struct Config {
   Color ws_focus_ring_color = rgb(0xffffff);
   Color battery_green = rgb(0x3ddc5a);
   Color battery_low = rgb(0xff5555);
+  // At or below this charge the battery glyph and percent turn red.
+  int battery_low_percent = 20;
   Color window_icon = rgb(0x6f7fd8);
   Color speaker = rgb(0xe6e6e6);
   Color recorder_color = rgb(0xff3b30);
   Color recorder_color_dim = rgb(0x7a0d08);
 
   // --- items ---
+  // Window item removed on purpose: the app name + title consumed the most
+  // width for the least information. Put "window" back to restore it.
   std::vector<std::string> order{"battery", "volume", "wifi", "bluetooth", "workspaces",
-                                 "window",  "recorder", "clock"};
+                                 "recorder", "clock"};
   std::map<std::string, ItemSlot> slots;
 
   // --- tooltip ---
