@@ -21,6 +21,7 @@
 #include "sources/power.hpp"
 #include "sources/recorder.hpp"
 #include "sources/stats.hpp"
+#include "sources/vpn.hpp"
 #include "sources/wifi.hpp"
 #include "wayland/display.hpp"
 #include "wayland/layer_surface.hpp"
@@ -120,6 +121,7 @@ class App {
   std::unique_ptr<CpuSource> cpu_;
   std::unique_ptr<GpuSource> gpu_;
   std::unique_ptr<Login1Source> login1_;
+  std::unique_ptr<VpnSource> vpn_;
   SignalFd signals_;
   TimerFd output_rebuild_timer_;
   TimerFd tooltip_seconds_timer_;

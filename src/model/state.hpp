@@ -20,6 +20,7 @@ enum class Item : std::uint32_t {
   Cpu = 1u << 7,
   Gpu = 1u << 8,
   Recorder = 1u << 9,
+  Vpn = 1u << 10,
   All = 0xFFFFFFFFu,
 };
 
@@ -122,6 +123,15 @@ struct RecorderState {
   bool operator==(const RecorderState&) const = default;
 };
 
+// AmneziaWG / WireGuard tunnel, tracked through its systemd unit.
+struct VpnState {
+  bool present = false;  // unit exists on this system
+  bool up = false;
+  std::string unit;
+  std::string state;  // e.g. "active (exited)"
+  bool operator==(const VpnState&) const = default;
+};
+
 struct CpuCoreState {
   double usage = 0.0;  // percent
   bool operator==(const CpuCoreState&) const = default;
@@ -159,6 +169,7 @@ struct AppState {
   CpuState cpu;
   GpuState gpu;
   RecorderState recorder;
+  VpnState vpn;
 };
 
 }  // namespace pillbar

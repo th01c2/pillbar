@@ -133,6 +133,7 @@ Item item_of(const std::string& name) {
   if (name == "clock") return Item::Clock;
   if (name == "cpu") return Item::Cpu;
   if (name == "gpu") return Item::Gpu;
+  if (name == "vpn") return Item::Vpn;
   return Item::None;
 }
 
@@ -224,6 +225,9 @@ double item_width(const Renderer& renderer, const Config& config, const AppState
     case Item::Recorder:
       if (!state.recorder.active) return -1.0;
       return renderer.icon_width(config.recorder_glyph);
+    case Item::Vpn:
+      if (!state.vpn.present || config.vpn_glyph.empty()) return -1.0;
+      return renderer.icon_width(config.vpn_glyph);
     default:
       return -1.0;
   }
@@ -569,6 +573,13 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
         const Color color{dim.r + (bright.r - dim.r) * p, dim.g + (bright.g - dim.g) * p,
                           dim.b + (bright.b - dim.b) * p, 1.0};
         icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, config_->recorder_glyph, color);
+        break;
+      }
+      case Item::Vpn: {
+        if (!state.vpn.present || config_->vpn_glyph.empty()) break;
+        const Color color = state.vpn.up ? config_->vpn_color : config_->vpn_color_down;
+        icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, config_->vpn_glyph,
+                               color);
         break;
       }
       case Item::Cpu: {

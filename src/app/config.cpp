@@ -15,6 +15,7 @@ void config_apply_default_slots(Config& config) {
   config.slots["window"] = ItemSlot{true, 0.450, 0.910};
   config.slots["clock"] = ItemSlot{true, 0.922, 0.986};
   config.slots["recorder"] = ItemSlot{true, 0.0, 0.0};
+  config.slots["vpn"] = ItemSlot{true, 0.0, 0.0};
 }
 
 }  // namespace pillbar

@@ -82,6 +82,11 @@ struct Config {
   // exist). While recording it pulses from dark red to bright red and back.
   std::string recorder_glyph = "\uEBA7";
   int recorder_pulse_ms = 2000;  // one dark -> bright -> dark cycle
+  // VPN indicator (nf-md-vpn): accent while the tunnel is up, red while down.
+  // Hidden only when the unit does not exist on the system.
+  std::string vpn_glyph = "\U000F0306";
+  // systemd unit that brings the tunnel up (AmneziaWG).
+  std::string vpn_unit = "awg-wg0.service";
   // Cursor size in logical pixels for the hand cursor over clickable items
   // (multiplied by the output scale internally, so it stays crisp on HiDPI).
   // Tune this to match the compositor's cursor: 24 is small, 48 is large.
@@ -111,12 +116,14 @@ struct Config {
   Color speaker = rgb(0xe6e6e6);
   Color recorder_color = rgb(0xff3b30);
   Color recorder_color_dim = rgb(0x7a0d08);
+  // Matches the focused-workspace accent, so a healthy tunnel is calm rather
+  // than a bright green that pulls the eye.
+  Color vpn_color = rgb(0x6f7fd8);
+  Color vpn_color_down = rgb(0xff5555);
 
   // --- items ---
-  // Window item removed on purpose: the app name + title consumed the most
-  // width for the least information. Put "window" back to restore it.
-  std::vector<std::string> order{"battery", "volume", "wifi", "bluetooth", "workspaces",
-                                 "recorder", "clock"};
+  std::vector<std::string> order{"battery", "volume", "wifi",  "bluetooth", "workspaces",
+                                 "window",  "recorder", "vpn", "clock"};
   std::map<std::string, ItemSlot> slots;
 
   // --- tooltip ---

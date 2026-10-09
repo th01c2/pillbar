@@ -149,6 +149,7 @@ void App::setup_sources() {
   dbus_.open_system(loop_);
   wifi_ = std::make_unique<WifiSource>(state_, notify, dbus_);
   bluetooth_ = std::make_unique<BluetoothSource>(state_, notify, dbus_);
+  vpn_ = std::make_unique<VpnSource>(state_, notify, dbus_, config_.vpn_unit);
   login1_ = std::make_unique<Login1Source>(dbus_, [this]() {
     if (sources_) sources_->refresh_all();
   });
@@ -168,6 +169,7 @@ void App::setup_sources() {
   sources_->add(wifi_.get());
   sources_->add(bluetooth_.get());
   sources_->add(login1_.get());
+  sources_->add(vpn_.get());
   sources_->start_all();
 }
 
@@ -594,6 +596,11 @@ std::vector<std::string> App::tooltip_lines(Item item, Bar& bar) const {
       break;
     case Item::Recorder:
       lines = recorder_ ? recorder_->detail() : std::vector<std::string>{"Recorder unavailable"};
+      break;
+    case Item::Vpn:
+      lines.push_back(std::string("VPN: ") + (state_.vpn.up ? "up" : "down"));
+      if (!state_.vpn.unit.empty()) lines.push_back(state_.vpn.unit);
+      if (!state_.vpn.state.empty()) lines.push_back("State: " + state_.vpn.state);
       break;
     case Item::Workspaces: {
       const int state_index =

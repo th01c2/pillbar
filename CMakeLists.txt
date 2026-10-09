@@ -92,6 +92,7 @@ set(PILLBAR_SOURCES
   src/sources/login1.cpp
   src/sources/manager.cpp
   src/sources/recorder.cpp
+  src/sources/vpn.cpp
 )
 
 add_executable(pillbar ${PILLBAR_SOURCES})
