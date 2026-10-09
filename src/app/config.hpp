@@ -122,8 +122,10 @@ struct Config {
   Color vpn_color_down = rgb(0xff5555);
 
   // --- items ---
+  // Window item omitted on purpose: the app name + title took the most width
+  // for the least information. Add "window" back here to restore it.
   std::vector<std::string> order{"battery", "volume", "wifi",  "bluetooth", "workspaces",
-                                 "window",  "recorder", "vpn", "clock"};
+                                 "recorder", "vpn", "clock"};
   std::map<std::string, ItemSlot> slots;
 
   // --- tooltip ---
