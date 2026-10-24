@@ -24,10 +24,6 @@ int JsonValue::as_int(int fallback) const {
   return type == Type::Number ? static_cast<int>(number_value) : fallback;
 }
 
-bool JsonValue::as_bool(bool fallback) const {
-  return type == Type::Bool ? bool_value : fallback;
-}
-
 namespace {
 
 class Parser {

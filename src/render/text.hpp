@@ -3,6 +3,7 @@
 #include <cairo.h>
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "app/config.hpp"
@@ -19,7 +20,6 @@ class TextRenderer {
   double size_px() const { return size_px_; }
   // Width of the inked text in logical pixels.
   double measure(const std::string& text) const;
-  double ink_height(const std::string& text) const;
 
   // Draws `text` with its ink-box left edge at x and vertically centered on
   // center_y.
@@ -34,7 +34,8 @@ class TextRenderer {
                       const Color& color, double level) const;
 
  private:
-  mutable std::vector<std::string> families_;
+  std::string family_list_;
+  mutable std::unordered_map<std::string, double> measure_cache_;
   double size_px_ = 12.0;
   double letter_spacing_ = 0.05;
   bool antialias_ = false;

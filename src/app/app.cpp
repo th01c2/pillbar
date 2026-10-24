@@ -3,10 +3,9 @@
 #include <sys/epoll.h>
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <ctime>
 
 #include "app/logging.hpp"
@@ -26,6 +25,13 @@ constexpr std::uint32_t kLayerOverlay = ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY;
 constexpr int kTooltipSurfaceHeight = 260;
 // Workspace focus slide duration; matches the notch resize's motion language.
 constexpr double kWorkspaceAnimSeconds = 0.18;
+
+int item_index(Item item) {
+  const unsigned value = static_cast<unsigned>(item);
+  if (value == 0u) return 0;
+  return std::min(static_cast<int>(std::countr_zero(value)),
+                  static_cast<int>(Bar::kItemSlots) - 1);
+}
 
 std::string format_clock_tooltip(const std::string& format) {
   const std::time_t now = std::time(nullptr);
@@ -638,25 +644,25 @@ void App::on_ws_tick(Bar& bar) {
 
 void App::update_item_appears(Bar& bar) {
   const auto now = std::chrono::steady_clock::now();
-  std::set<Item> visible;
+  std::array<bool, Bar::kItemSlots> visible{};
   int new_count = 0;
   for (const ItemBox& box : bar.layout.items) {
-    if (bar.seen_initial && bar.known_items.count(box.item) == 0) {
-      Bar::AppearState& state = bar.appear[box.item];
+    const int index = item_index(box.item);
+    visible[index] = true;
+    if (bar.seen_initial && !bar.known[index]) {
+      Bar::AppearState& state = bar.appear[index];
       state.active = true;
       state.start = now;
       state.delay_ms = 35.0 * static_cast<double>(new_count);
       ++new_count;
     }
-    visible.insert(box.item);
   }
-  bar.known_items = std::move(visible);
+  bar.known = visible;
   bar.seen_initial = true;
 
   for (ItemBox& box : bar.layout.items) {
-    const auto it = bar.appear.find(box.item);
-    if (it == bar.appear.end() || !it->second.active) continue;
-    Bar::AppearState& state = it->second;
+    Bar::AppearState& state = bar.appear[item_index(box.item)];
+    if (!state.active) continue;
     const double elapsed =
         std::chrono::duration<double, std::milli>(now - state.start).count() - state.delay_ms;
     if (elapsed < 0.0) {
@@ -680,8 +686,8 @@ void App::update_item_appears(Bar& bar) {
 void App::on_appear_tick(Bar& bar) {
   redraw_bar(bar, Item::All);
   bool any = false;
-  for (const auto& entry : bar.appear) {
-    if (entry.second.active) any = true;
+  for (const Bar::AppearState& state : bar.appear) {
+    if (state.active) any = true;
   }
   if (any) {
     if (bar.appear_timer.valid()) bar.appear_timer.arm_relative_ms(16, true);
@@ -810,7 +816,6 @@ void App::show_tooltip(Bar& bar) {
   int tx = static_cast<int>(std::lround(bar_screen_x + item_center - logical_w / 2.0));
   tx = std::clamp(tx, 0, std::max(0, bar.output_w - logical_w));
   bar.tooltip_x = tx;
-  bar.tooltip_y = 0;
 
   // The tooltip layer surface is a fixed-size canvas; only its buffer content
   // (positioned at tooltip_x) changes. No layer geometry is re-committed here,

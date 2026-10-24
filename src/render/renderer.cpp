@@ -253,6 +253,8 @@ void Renderer::configure(const Config& config) {
   icon_text_.configure(config.icon_fonts,
                        std::max(1.0, config.height_px * config.icon_size_frac), 0.0,
                        /*antialias=*/true);
+  tooltip_text_.configure(config.fonts, config.tooltip_font_size_px,
+                          config.letter_spacing, config.smooth_text);
 }
 
 double Renderer::desired_width(const Config& config, const AppState& state, int output_w) const {
@@ -399,14 +401,11 @@ void Renderer::draw_tooltip(cairo_t* cr, const std::vector<std::string>& lines, 
   rounded_rect(cr, 0, 0, metrics.width, metrics.height, config_->tooltip_radius_px);
   cairo_fill(cr);
 
-  TextRenderer tooltip_text;
-  tooltip_text.configure(config_->fonts, config_->tooltip_font_size_px,
-                         config_->letter_spacing, config_->smooth_text);
   double y = config_->tooltip_pad_px + metrics.line_height / 2.0;
   for (const std::string& line : lines) {
     Color color = config_->text;
     color.a *= opacity;
-    tooltip_text.draw_left(cr, config_->tooltip_pad_px, y, line, color);
+    tooltip_text_.draw_left(cr, config_->tooltip_pad_px, y, line, color);
     y += metrics.line_height;
   }
   cairo_restore(cr);

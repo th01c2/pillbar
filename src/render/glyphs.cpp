@@ -24,11 +24,6 @@ void fill_pixel(cairo_t* cr, double x, double y, double px, const Color& color) 
 const PixelGlyph& bluetooth() { return kBluetooth; }
 const PixelGlyph& cpu() { return kCpu; }
 
-double glyph_aspect(const PixelGlyph& glyph) {
-  const int h = glyph.height();
-  return h > 0 ? static_cast<double>(glyph.width()) / static_cast<double>(h) : 1.0;
-}
-
 void draw(cairo_t* cr, const PixelGlyph& glyph, double x, double y, double px, const Color& color) {
   if (px <= 0.0) return;
   for (std::size_t row = 0; row < glyph.rows.size(); ++row) {

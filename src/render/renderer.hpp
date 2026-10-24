@@ -23,7 +23,6 @@ struct TooltipMetrics {
 class Renderer {
  public:
   void configure(const Config& config);
-  TextRenderer& text() { return text_; }
 
   double text_width(const std::string& text) const { return text_.measure(text); }
   double icon_width(const std::string& icon) const { return icon_text_.measure(icon); }
@@ -53,6 +52,7 @@ class Renderer {
   const Config* config_ = nullptr;
   TextRenderer text_;
   TextRenderer icon_text_;
+  TextRenderer tooltip_text_;
   double scale_ = 1.0;
 };
 

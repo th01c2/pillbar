@@ -23,19 +23,15 @@ constexpr Color rgb(unsigned int hex, double alpha = 1.0) {
 
 struct ItemSlot {
   bool enabled = true;
-  double x0 = 0.0;  // fraction of bar width
-  double x1 = 1.0;  // fraction of bar width
 };
 
 struct Config {
   // --- bar geometry ---
-  double width_frac = 0.50;         // fraction of output width
   double height_px = 30.0;          // logical pixels
   double margin_top_frac = 0.0;     // fraction of output height
   // Notch shape: flush with the screen edge, rounded only on the bottom.
   bool notch = true;
   double notch_radius_px = 12.0;
-  std::string layer = "top";        // background | bottom | top | overlay
   std::string namespace_name = "pillbar";
   std::string monitors = "all";     // all | primary
 

@@ -112,19 +112,20 @@ PangoLayout* make_layout(cairo_t* cr, const std::string& family, double size_px,
 
 void TextRenderer::configure(const std::vector<std::string>& families, double size_px,
                              double letter_spacing, bool antialias) {
-  families_ = families;
-  if (families_.empty()) families_ = {"monospace"};
+  family_list_ = join_families(families);
+  measure_cache_.clear();
   size_px_ = size_px > 0.0 ? size_px : 12.0;
   letter_spacing_ = letter_spacing;
   antialias_ = antialias;
 }
 
 double TextRenderer::measure(const std::string& text) const {
-  // Use a tiny throwaway draw context: create a 1x1 image surface.
+  const auto cached = measure_cache_.find(text);
+  if (cached != measure_cache_.end()) return cached->second;
   cairo_surface_t* surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
   cairo_t* cr = cairo_create(surface);
   PangoLayout* layout =
-      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, nullptr);
+      make_layout(cr, family_list_, size_px_, letter_spacing_, antialias_, nullptr);
   const std::string safe = sanitize_utf8(text);
   pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};
@@ -133,23 +134,9 @@ double TextRenderer::measure(const std::string& text) const {
   g_object_unref(layout);
   cairo_destroy(cr);
   cairo_surface_destroy(surface);
+  if (measure_cache_.size() >= 512) measure_cache_.clear();
+  measure_cache_.emplace(text, width);
   return width;
-}
-
-double TextRenderer::ink_height(const std::string& text) const {
-  cairo_surface_t* surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
-  cairo_t* cr = cairo_create(surface);
-  PangoLayout* layout =
-      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, nullptr);
-  const std::string safe = sanitize_utf8(text);
-  pango_layout_set_text(layout, safe.c_str(), -1);
-  PangoRectangle ink{};
-  pango_layout_get_pixel_extents(layout, &ink, nullptr);
-  const double height = ink.height;
-  g_object_unref(layout);
-  cairo_destroy(cr);
-  cairo_surface_destroy(surface);
-  return height;
 }
 
 void TextRenderer::draw_left(cairo_t* cr, double x, double center_y, const std::string& text,
@@ -157,7 +144,7 @@ void TextRenderer::draw_left(cairo_t* cr, double x, double center_y, const std::
   if (text.empty()) return;
   PangoContext* ctx = nullptr;
   PangoLayout* layout =
-      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, &ctx);
+      make_layout(cr, family_list_, size_px_, letter_spacing_, antialias_, &ctx);
   const std::string safe = sanitize_utf8(text);
   pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};
@@ -177,7 +164,7 @@ void TextRenderer::draw_center(cairo_t* cr, double center_x, double center_y,
   if (text.empty()) return;
   PangoContext* ctx = nullptr;
   PangoLayout* layout =
-      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, &ctx);
+      make_layout(cr, family_list_, size_px_, letter_spacing_, antialias_, &ctx);
   const std::string safe = sanitize_utf8(text);
   pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};
@@ -197,7 +184,7 @@ void TextRenderer::draw_center_fill(cairo_t* cr, double center_x, double center_
                                     double level) const {
   if (text.empty() || level <= 0.0 || color.a <= 0.0) return;
   PangoLayout* layout =
-      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, nullptr);
+      make_layout(cr, family_list_, size_px_, letter_spacing_, antialias_, nullptr);
   const std::string safe = sanitize_utf8(text);
   pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};
@@ -241,7 +228,7 @@ void TextRenderer::draw_left_fill(cairo_t* cr, double x, double center_y,
                                   double level) const {
   if (text.empty() || level <= 0.0 || color.a <= 0.0) return;
   PangoLayout* layout =
-      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, nullptr);
+      make_layout(cr, family_list_, size_px_, letter_spacing_, antialias_, nullptr);
   const std::string safe = sanitize_utf8(text);
   pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};

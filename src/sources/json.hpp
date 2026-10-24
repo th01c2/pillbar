@@ -30,7 +30,6 @@ class JsonValue {
   std::string as_string(const std::string& fallback = "") const;
   double as_number(double fallback = 0.0) const;
   int as_int(int fallback = 0) const;
-  bool as_bool(bool fallback = false) const;
 };
 
 JsonValue json_parse(const std::string& text, std::string* error);

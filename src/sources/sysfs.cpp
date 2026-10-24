@@ -54,16 +54,6 @@ bool read_int(const std::string& path, int* out) {
   return true;
 }
 
-bool read_double(const std::string& path, double* out) {
-  std::string value;
-  if (!read_string(path, &value)) return false;
-  char* end = nullptr;
-  const double parsed = std::strtod(value.c_str(), &end);
-  if (end == value.c_str()) return false;
-  *out = parsed;
-  return true;
-}
-
 bool exists(const std::string& path) {
   std::ifstream file(path);
   return static_cast<bool>(file);

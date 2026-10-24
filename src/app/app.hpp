@@ -1,9 +1,8 @@
 #pragma once
 
 #include <chrono>
-#include <map>
+#include <array>
 #include <memory>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -74,8 +73,9 @@ struct Bar {
     std::chrono::steady_clock::time_point start;
     double delay_ms = 0.0;
   };
-  std::map<Item, AppearState> appear;
-  std::set<Item> known_items;
+  static constexpr std::size_t kItemSlots = 10;
+  std::array<AppearState, kItemSlots> appear{};
+  std::array<bool, kItemSlots> known{};
   bool seen_initial = false;
   TimerFd appear_timer;
 
@@ -89,7 +89,6 @@ struct Bar {
   TooltipMetrics tooltip_metrics;
   std::vector<std::string> tooltip_lines;
   int tooltip_x = 0;
-  int tooltip_y = 0;
 };
 
 // Application object: owns the event loop, display, renderer, sources and bars.
