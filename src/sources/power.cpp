@@ -20,7 +20,7 @@ constexpr int kShimmerStepMs = 50;
 constexpr int kShimmerPeriodMs = 4500;
 constexpr double kPi = 3.14159265358979323846;
 constexpr int kChargeStepMs = 16;
-constexpr int kChargeDurationMs = 900;
+constexpr int kChargeDurationMs = 450;
 
 }  // namespace
 
