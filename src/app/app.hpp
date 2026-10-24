@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -53,6 +54,8 @@ struct Bar {
   Item dirty = Item::All;
   bool animating = false;
   TimerFd anim_timer;
+  std::map<Item, int> anim_from_x;
+  double anim_progress = 1.0;
 
   // Workspace focus indicator: a single disc that slides between numerals.
   bool ws_focus_valid = false;

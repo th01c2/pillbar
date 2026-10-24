@@ -484,6 +484,22 @@ void App::redraw_bar(Bar& bar, Item items) {
       box.rect.x = bar.layout.bar_w - pad - box.rect.w;
     }
   }
+  if (bar.anim_progress < 1.0) {
+    int ws_delta = 0;
+    for (ItemBox& box : bar.layout.items) {
+      if (box.item == Item::Battery || box.item == Item::Clock) continue;
+      const auto it = bar.anim_from_x.find(box.item);
+      if (it == bar.anim_from_x.end()) continue;
+      const int target_x = box.rect.x;
+      const int x = static_cast<int>(
+          std::lround(it->second + (target_x - it->second) * bar.anim_progress));
+      if (box.item == Item::Workspaces) ws_delta += x - box.rect.x;
+      box.rect.x = x;
+    }
+    if (ws_delta != 0) {
+      for (WorkspaceSlot& slot : bar.layout.workspace_slots) slot.cx += ws_delta;
+    }
+  }
   update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);
   cairo_t* cr = bar.canvas->begin();
@@ -521,10 +537,14 @@ void App::update_target_width(Bar& bar) {
     bar.pill_w = target;
     bar.animating = false;
     bar.anim_timer.disarm();
+    bar.anim_progress = 1.0;
     redraw_bar(bar, Item::All);
     return;
   }
   if (!bar.anim_timer.valid()) return;
+  bar.anim_from_x.clear();
+  for (const ItemBox& box : bar.layout.items) bar.anim_from_x[box.item] = box.rect.x;
+  bar.anim_progress = 0.0;
   bar.anim_from = bar.pill_w;
   bar.anim_start = std::chrono::steady_clock::now();
   if (!bar.animating) {
@@ -543,6 +563,7 @@ void App::on_anim_tick(Bar& bar) {
   double progress = elapsed / kDurationSeconds;
   if (progress >= 1.0) progress = 1.0;
   const double eased = 1.0 - std::pow(1.0 - progress, 5.0);
+  bar.anim_progress = eased;
   bar.pill_w = bar.anim_from + (bar.pill_target - bar.anim_from) * eased;
   if (progress >= 1.0) {
     bar.pill_w = bar.pill_target;
