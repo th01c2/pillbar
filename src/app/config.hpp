@@ -106,8 +106,8 @@ struct Config {
   // to spot (the reference #55555a was nearly identical to the occupied fill).
   Color ws_focused = rgb(0x6f7fd8);
   Color ws_focused_text = rgb(0xffffff);
-  bool ws_focus_ring = false;                    // draw a ring around the active circle
-  Color ws_focus_ring_color = rgb(0xffffff);
+  bool ws_focus_ring = true;
+  Color ws_focus_ring_color = rgb(0xffffff, 0.45);
   Color battery_green = rgb(0x3ddc5a);
   Color battery_low = rgb(0xff5555);
   Color battery_charge_fill = rgb(0xffffff, 0.22);
