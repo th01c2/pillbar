@@ -121,6 +121,11 @@ struct Config {
   // than a bright green that pulls the eye.
   Color vpn_color = rgb(0x6f7fd8);
   Color vpn_color_down = rgb(0xff5555);
+  Color cluster_color = rgb(0x232323);
+  double cluster_gap_merged = 6.0;
+  double cluster_gap_split = 20.0;
+  double cluster_capsule_pad_px = 4.0;
+  int cluster_blur_radius = 3;
 
   // --- items ---
   // Window item omitted on purpose: the app name + title took the most width

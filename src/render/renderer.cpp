@@ -137,6 +137,15 @@ Item item_of(const std::string& name) {
   return Item::None;
 }
 
+bool is_cluster_item(Item item) {
+  return item == Item::Battery || item == Item::Volume || item == Item::Wifi ||
+         item == Item::Bluetooth;
+}
+
+double gap_between(Item previous, Item current, double cluster_gap) {
+  return is_cluster_item(previous) && is_cluster_item(current) ? cluster_gap : kItemGap;
+}
+
 // One rendered workspace numeral: its id plus the index into
 // AppState::workspaces.list (-1 when nothing is known about it).
 struct WorkspaceDisplay {
@@ -233,7 +242,59 @@ double item_width(const Renderer& renderer, const Config& config, const AppState
   }
 }
 
+void blur_and_threshold(unsigned char* data, int width, int height, int stride, int radius) {
+  if (width <= 0 || height <= 0) return;
+  std::vector<unsigned int> alpha(static_cast<std::size_t>(width) * height);
+  for (int y = 0; y < height; ++y) {
+    const unsigned char* row = data + static_cast<std::size_t>(y) * stride;
+    for (int x = 0; x < width; ++x) {
+      alpha[static_cast<std::size_t>(y) * width + x] = row[x * 4 + 3];
+    }
+  }
+  std::vector<unsigned int> scratch(alpha.size());
+  const int r = std::max(1, radius);
+  for (int pass = 0; pass < 3; ++pass) {
+    for (int y = 0; y < height; ++y) {
+      for (int x = 0; x < width; ++x) {
+        unsigned int sum = 0;
+        int count = 0;
+        for (int dx = -r; dx <= r; ++dx) {
+          sum += alpha[static_cast<std::size_t>(y) * width + std::clamp(x + dx, 0, width - 1)];
+          ++count;
+        }
+        scratch[static_cast<std::size_t>(y) * width + x] = sum / count;
+      }
+    }
+    for (int y = 0; y < height; ++y) {
+      for (int x = 0; x < width; ++x) {
+        unsigned int sum = 0;
+        int count = 0;
+        for (int dy = -r; dy <= r; ++dy) {
+          sum += scratch[static_cast<std::size_t>(std::clamp(y + dy, 0, height - 1)) * width + x];
+          ++count;
+        }
+        alpha[static_cast<std::size_t>(y) * width + x] = sum / count;
+      }
+    }
+  }
+  for (int y = 0; y < height; ++y) {
+    unsigned char* row = data + static_cast<std::size_t>(y) * stride;
+    for (int x = 0; x < width; ++x) {
+      const int a = static_cast<int>(alpha[static_cast<std::size_t>(y) * width + x]);
+      const unsigned char v = static_cast<unsigned char>(std::clamp(a * 18 - 1785, 0, 255));
+      row[x * 4 + 0] = v;
+      row[x * 4 + 1] = v;
+      row[x * 4 + 2] = v;
+      row[x * 4 + 3] = v;
+    }
+  }
+}
+
 }  // namespace
+
+Renderer::~Renderer() {
+  if (cluster_mask_ != nullptr) cairo_surface_destroy(cluster_mask_);
+}
 
 void Renderer::configure(const Config& config) {
   config_ = &config;
@@ -244,16 +305,20 @@ void Renderer::configure(const Config& config) {
                        /*antialias=*/true);
 }
 
-double Renderer::desired_width(const Config& config, const AppState& state, int output_w) const {
+double Renderer::desired_width(const Config& config, const AppState& state, int output_w,
+                               double cluster_gap) const {
   double total = kPillPad * 2.0;
   int shown = 0;
+  Item previous = Item::None;
   for (const std::string& name : config.order) {
     const auto it = config.slots.find(name);
     if (it == config.slots.end() || !it->second.enabled) continue;
-    const double width = item_width(*this, config, state, item_of(name));
+    const Item item = item_of(name);
+    const double width = item_width(*this, config, state, item);
     if (width < 0.0) continue;
-    if (shown > 0) total += kItemGap;
+    if (shown > 0) total += gap_between(previous, item, cluster_gap);
     total += width;
+    previous = item;
     ++shown;
   }
   const double max_width = static_cast<double>(output_w) * 0.96;
@@ -261,7 +326,7 @@ double Renderer::desired_width(const Config& config, const AppState& state, int 
 }
 
 BarLayout Renderer::compute_layout(const Config& config, const AppState& state, double pill_w,
-                                   int output_w, int output_h) const {
+                                   int output_w, int output_h, double cluster_gap) const {
   BarLayout layout;
   layout.bar_w = std::max(1, static_cast<int>(std::lround(pill_w)));
   layout.bar_h = std::max(1, static_cast<int>(std::lround(config.height_px)));
@@ -275,15 +340,17 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
   };
   std::vector<Entry> entries;
   double content = 0.0;
+  Item previous_item = Item::None;
   for (const std::string& name : config.order) {
     const auto it = config.slots.find(name);
     if (it == config.slots.end() || !it->second.enabled) continue;
     const Item item = item_of(name);
     const double width = item_width(*this, config, state, item);
     if (width < 0.0) continue;
-    if (!entries.empty()) content += kItemGap;
+    if (!entries.empty()) content += gap_between(previous_item, item, cluster_gap);
     content += width;
     entries.push_back(Entry{item, width});
+    previous_item = item;
   }
 
   // If the pill is not wide enough yet (e.g. mid-animation), take the deficit
@@ -310,11 +377,14 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
   const double min_screen = static_cast<double>(layout.screen_x) + kPillPad;
   if (cursor_screen < min_screen) cursor_screen = min_screen;
   const double center_y = static_cast<double>(layout.bar_h) / 2.0;
-  for (const Entry& entry : entries) {
+  for (std::size_t i = 0; i < entries.size(); ++i) {
+    const Entry& entry = entries[i];
     const Rect rect{static_cast<int>(std::lround(cursor_screen)) - layout.screen_x, 0,
                     std::max(1, static_cast<int>(std::lround(entry.width))), layout.bar_h};
     layout.items.push_back(ItemBox{entry.item, rect});
-    cursor_screen += entry.width + kItemGap;
+    if (i + 1 < entries.size()) {
+      cursor_screen += entry.width + gap_between(entry.item, entries[i + 1].item, cluster_gap);
+    }
   }
 
   for (const ItemBox& box : layout.items) {
@@ -401,6 +471,62 @@ void Renderer::draw_tooltip(cairo_t* cr, const std::vector<std::string>& lines, 
   cairo_restore(cr);
 }
 
+void Renderer::draw_system_cluster(cairo_t* cr, const BarLayout& layout) {
+  std::vector<const Rect*> rects;
+  for (Item item : {Item::Battery, Item::Volume, Item::Wifi, Item::Bluetooth}) {
+    const Rect* rect = layout.rect_for(item);
+    if (rect != nullptr) rects.push_back(rect);
+  }
+  if (rects.size() < 2) return;
+
+  const double pad = config_->cluster_capsule_pad_px;
+  double left = rects.front()->x - pad;
+  double right = rects.front()->x + rects.front()->w + pad;
+  for (const Rect* rect : rects) {
+    left = std::min(left, static_cast<double>(rect->x) - pad);
+    right = std::max(right, static_cast<double>(rect->x + rect->w) + pad);
+  }
+
+  const int blur_radius = std::max(1, config_->cluster_blur_radius);
+  const double margin = static_cast<double>(blur_radius) * 3.0 + 2.0;
+  const int mask_w = std::max(1, static_cast<int>(std::ceil(right - left + margin * 2.0)));
+  const int mask_h = std::max(1, static_cast<int>(std::ceil(layout.bar_h + margin * 2.0)));
+  if (cluster_mask_ == nullptr || cluster_mask_w_ != mask_w || cluster_mask_h_ != mask_h) {
+    if (cluster_mask_ != nullptr) cairo_surface_destroy(cluster_mask_);
+    cluster_mask_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, mask_w, mask_h);
+    cluster_mask_w_ = mask_w;
+    cluster_mask_h_ = mask_h;
+  }
+
+  cairo_t* mask = cairo_create(cluster_mask_);
+  cairo_set_operator(mask, CAIRO_OPERATOR_CLEAR);
+  cairo_paint(mask);
+  cairo_set_operator(mask, CAIRO_OPERATOR_OVER);
+  cairo_set_source_rgba(mask, 1.0, 1.0, 1.0, 1.0);
+  const double capsule_h = std::max(1.0, layout.bar_h - pad * 2.0);
+  const double capsule_r = capsule_h / 2.0;
+  const double stretch = std::clamp(layout.cluster_stretch, 1.0, 1.2);
+  for (const Rect* rect : rects) {
+    const double center = rect->x + rect->w / 2.0;
+    const double width = (rect->w + pad * 2.0) * stretch;
+    rounded_rect(mask, center - width / 2.0 - left + margin, pad + margin, width, capsule_h,
+                 capsule_r);
+    cairo_fill(mask);
+  }
+  cairo_destroy(mask);
+
+  cairo_surface_flush(cluster_mask_);
+  blur_and_threshold(cairo_image_surface_get_data(cluster_mask_), mask_w, mask_h,
+                     cairo_image_surface_get_stride(cluster_mask_), blur_radius);
+  cairo_surface_mark_dirty(cluster_mask_);
+
+  cairo_save(cr);
+  cairo_set_source_rgba(cr, config_->cluster_color.r, config_->cluster_color.g,
+                        config_->cluster_color.b, config_->cluster_color.a);
+  cairo_mask_surface(cr, cluster_mask_, left - margin, -margin);
+  cairo_restore(cr);
+}
+
 void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& state) {
   cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
   cairo_set_source_rgba(cr, 0, 0, 0, 0);
@@ -433,6 +559,8 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
     rounded_rect(cr, 0, 0, layout.bar_w, layout.bar_h, radius);
   }
   cairo_fill(cr);
+
+  draw_system_cluster(cr, layout);
 
   // Item shapes (the workspace circles) are anti-aliased; text and icons set
   // their own font options, so this only affects the vector drawing.

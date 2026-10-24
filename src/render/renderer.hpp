@@ -22,6 +22,8 @@ struct TooltipMetrics {
 // Cairo context by the surface scale before calling these methods.
 class Renderer {
  public:
+  ~Renderer();
+
   void configure(const Config& config);
   TextRenderer& text() { return text_; }
 
@@ -30,12 +32,13 @@ class Renderer {
 
   // Natural pill width for the given state: the sum of each item's intrinsic
   // content width (icon + text + padding + gaps), clamped to the output.
-  double desired_width(const Config& config, const AppState& state, int output_w) const;
+  double desired_width(const Config& config, const AppState& state, int output_w,
+                       double cluster_gap) const;
   // Positions the enabled items for a pill of width `pill_w`, centered on
   // `output_w`. Items keep their intrinsic widths, so a wider pill adds
   // breathing room rather than stretching the text.
   BarLayout compute_layout(const Config& config, const AppState& state, double pill_w,
-                           int output_w, int output_h) const;
+                           int output_w, int output_h, double cluster_gap) const;
 
   void draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& state);
   void draw_tooltip(cairo_t* cr, const std::vector<std::string>& lines, double opacity,
@@ -50,10 +53,15 @@ class Renderer {
   std::string ellipsize(const std::string& text, double max_width) const;
 
  private:
+  void draw_system_cluster(cairo_t* cr, const BarLayout& layout);
+
   const Config* config_ = nullptr;
   TextRenderer text_;
   TextRenderer icon_text_;
   double scale_ = 1.0;
+  cairo_surface_t* cluster_mask_ = nullptr;
+  int cluster_mask_w_ = 0;
+  int cluster_mask_h_ = 0;
 };
 
 }  // namespace pillbar
