@@ -26,7 +26,6 @@ constexpr std::uint32_t kLayerOverlay = ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY;
 constexpr int kTooltipSurfaceHeight = 260;
 // Workspace focus slide duration; matches the notch resize's motion language.
 constexpr double kWorkspaceAnimSeconds = 0.18;
-constexpr double kPi = 3.14159265358979323846;
 
 std::string format_clock_tooltip(const std::string& format) {
   const std::time_t now = std::time(nullptr);
@@ -609,20 +608,14 @@ void App::update_workspace_focus(Bar& bar) {
     const double eased = 1.0 - std::pow(1.0 - progress, 3.0);
     bar.ws_focus_x = bar.ws_anim_from_x + (bar.ws_anim_to_x - bar.ws_anim_from_x) * eased;
     bar.ws_focus_d = bar.ws_anim_from_d + (bar.ws_anim_to_d - bar.ws_anim_from_d) * eased;
-    bar.ws_focus_wobble = std::sin(kPi * progress) * 0.16;
-    bar.ws_focus_phase = progress * 2.0 * kPi * 1.5;
   } else {
     bar.ws_focus_x = target_x;
     bar.ws_focus_d = target_d;
-    bar.ws_focus_wobble = 0.0;
-    bar.ws_focus_phase = 0.0;
   }
 
   bar.layout.ws_focus_visible = target_valid && bar.ws_focus_valid;
   bar.layout.ws_focus_x = bar.ws_focus_x;
   bar.layout.ws_focus_d = bar.ws_focus_d;
-  bar.layout.ws_focus_wobble = bar.ws_focus_wobble;
-  bar.layout.ws_focus_phase = bar.ws_focus_phase;
 }
 
 void App::on_ws_tick(Bar& bar) {

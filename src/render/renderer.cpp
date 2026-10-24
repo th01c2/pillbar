@@ -37,24 +37,6 @@ void notch_rect(cairo_t* cr, double x, double y, double w, double h, double r) {
   cairo_close_path(cr);
 }
 
-void wobbly_circle(cairo_t* cr, double cx, double cy, double radius, double wobble,
-                   double phase) {
-  constexpr int kSegments = 72;
-  const double tau = 2.0 * kPi;
-  for (int i = 0; i <= kSegments; ++i) {
-    const double theta = tau * static_cast<double>(i) / kSegments;
-    const double r = radius * (1.0 + wobble * std::sin(3.0 * theta + phase));
-    const double px = cx + r * std::cos(theta);
-    const double py = cy + r * std::sin(theta);
-    if (i == 0) {
-      cairo_move_to(cr, px, py);
-    } else {
-      cairo_line_to(cr, px, py);
-    }
-  }
-  cairo_close_path(cr);
-}
-
 void set_color(cairo_t* cr, const Color& c, double alpha_mul = 1.0) {
   cairo_set_source_rgba(cr, c.r, c.g, c.b, c.a * alpha_mul);
 }
@@ -545,18 +527,15 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
 
         if (layout.ws_focus_visible && layout.ws_focus_d > 0.0) {
           const double radius = layout.ws_focus_d / 2.0;
-          const double wobble = std::clamp(layout.ws_focus_wobble, 0.0, 0.25);
-          wobbly_circle(cr, layout.ws_focus_x, center_y, radius, wobble,
-                        layout.ws_focus_phase);
           set_color(cr, config_->ws_focused);
+          cairo_arc(cr, layout.ws_focus_x, center_y, radius, 0.0, 2.0 * kPi);
           cairo_fill(cr);
           if (config_->ws_focus_ring) {
             const double ring_w = std::max(
                 1.0 / scale_, std::round(layout.ws_focus_d * 0.10 * scale_) / scale_);
-            wobbly_circle(cr, layout.ws_focus_x, center_y, radius + ring_w / 2.0, wobble,
-                          layout.ws_focus_phase);
             set_color(cr, config_->ws_focus_ring_color);
             cairo_set_line_width(cr, ring_w);
+            cairo_arc(cr, layout.ws_focus_x, center_y, radius + ring_w / 2.0, 0.0, 2.0 * kPi);
             cairo_stroke(cr);
           }
         }
