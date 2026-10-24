@@ -205,9 +205,7 @@ void App::create_bar(Output& output) {
   bar->scale = output.scale();
   if (bar->output_w <= 0 || bar->output_h <= 0) return;
   bar->bar_h = std::max(1, static_cast<int>(std::lround(config_.height_px)));
-  bar->cluster_t = 0.0;
-  bar->cluster_target = 0.0;
-  bar->pill_w = renderer_.desired_width(config_, state_, bar->output_w, bar->cluster_t);
+  bar->pill_w = renderer_.desired_width(config_, state_, bar->output_w);
   bar->pill_target = bar->pill_w;
   const int top = static_cast<int>(std::lround(bar->output_h * config_.margin_top_frac));
   LOG_DEBUG("creating bar on %s: output=%dx%d pill=%.0fx%d scale=%.2f",
@@ -323,12 +321,6 @@ void App::create_bar(Output& output) {
   });
   bar->ws_timer.disarm();
 
-  loop_.add(bar->cluster_timer.get(), EPOLLIN, [this, raw](std::uint32_t) {
-    raw->cluster_timer.consume();
-    on_cluster_tick(*raw);
-  });
-  bar->cluster_timer.disarm();
-
   bars_.push_back(std::move(bar));
 }
 
@@ -338,7 +330,6 @@ void App::destroy_bars() {
     if (bar->fade_timer.valid()) loop_.del(bar->fade_timer.get());
     if (bar->anim_timer.valid()) loop_.del(bar->anim_timer.get());
     if (bar->ws_timer.valid()) loop_.del(bar->ws_timer.get());
-    if (bar->cluster_timer.valid()) loop_.del(bar->cluster_timer.get());
   }
   bars_.clear();
   tooltip_bar_ = nullptr;
@@ -402,13 +393,11 @@ void App::on_pointer_enter(wl_surface* surface, double x, double y) {
 void App::on_pointer_motion(wl_surface* surface, double x, double y) {
   Bar* bar = bar_for_surface(surface);
   if (bar == nullptr) return;
-  const bool over_cluster = in_cluster(*bar, x, y);
   const int previous_ws = bar->hover_ws;  // hit_test overwrites this
   const Item item = hit_test(*bar, x, y);
   // Clickable items show the hand cursor, everything else the arrow.
   if (Pointer* pointer = display_.pointer()) {
-    pointer->set_cursor(over_cluster || item == Item::Workspaces || item == Item::Recorder,
-                        bar->scale);
+    pointer->set_cursor(item == Item::Workspaces || item == Item::Recorder, bar->scale);
   }
   // Every workspace numeral is the same item, so also react when the specific
   // circle under the pointer changes — otherwise the previous workspace's
@@ -418,7 +407,7 @@ void App::on_pointer_motion(wl_surface* surface, double x, double y) {
   if (item == bar->hover && !workspace_changed) return;
 
   bar->hover = item;
-  if (item == Item::None || (over_cluster && bar->cluster_t < 0.5)) {
+  if (item == Item::None) {
     hide_tooltip(*bar);
     bar->hover_delay.disarm();
     return;
@@ -444,10 +433,6 @@ void App::on_pointer_leave(wl_surface* surface) {
 void App::on_pointer_button(wl_surface* surface, std::uint32_t button, double x, double y) {
   Bar* bar = bar_for_surface(surface);
   if (bar == nullptr) return;
-  if (button == 0x110 /* BTN_LEFT */ && in_cluster(*bar, x, y)) {
-    set_cluster_split(*bar, !bar->cluster_split);
-    return;
-  }
   const Item item = hit_test(*bar, x, y);
   if (item == Item::Workspaces && button == 0x110 /* BTN_LEFT */ && bar->hover_ws >= 0 &&
       static_cast<std::size_t>(bar->hover_ws) < bar->layout.workspace_slots.size()) {
@@ -498,8 +483,8 @@ void App::redraw_bar(Bar& bar, Item items) {
     bar.dirty |= items;
     return;
   }
-  bar.layout = renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w,
-                                        bar.output_h, bar.cluster_t);
+  bar.layout =
+      renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
   update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);
   cairo_t* cr = bar.canvas->begin();
@@ -525,8 +510,7 @@ void App::redraw_bar(Bar& bar, Item items) {
 }
 
 void App::update_target_width(Bar& bar) {
-  const double target =
-      renderer_.desired_width(config_, state_, bar.output_w, bar.cluster_t);
+  const double target = renderer_.desired_width(config_, state_, bar.output_w);
   // Titles that animate (spinners, progress) change the measured width by a
   // few pixels every frame; ignore changes below this deadband so the notch
   // does not sit there vibrating.
@@ -641,51 +625,6 @@ void App::on_ws_tick(Bar& bar) {
   } else {
     bar.ws_timer.disarm();
   }
-}
-
-void App::on_cluster_tick(Bar& bar) {
-  constexpr double dt = 0.016;
-  constexpr double stiffness = 196.0;
-  constexpr double damping = 15.4;
-  const double delta = bar.cluster_t - bar.cluster_target;
-  const double accel = -stiffness * delta - damping * bar.cluster_velocity;
-  bar.cluster_velocity += accel * dt;
-  bar.cluster_t += bar.cluster_velocity * dt;
-  if (std::fabs(bar.cluster_t - bar.cluster_target) < 0.002 &&
-      std::fabs(bar.cluster_velocity) < 0.01) {
-    bar.cluster_t = bar.cluster_target;
-    bar.cluster_velocity = 0.0;
-    bar.cluster_animating = false;
-    bar.cluster_timer.disarm();
-  }
-  bar.pill_w = renderer_.desired_width(config_, state_, bar.output_w, bar.cluster_t);
-  bar.pill_target = bar.pill_w;
-  bar.animating = false;
-  bar.anim_timer.disarm();
-  redraw_bar(bar, Item::All);
-  if (bar.cluster_animating) bar.cluster_timer.arm_relative_ms(16, true);
-}
-
-void App::set_cluster_split(Bar& bar, bool split) {
-  bar.cluster_split = split;
-  bar.cluster_target = split ? 1.0 : 0.0;
-  if (!bar.cluster_timer.valid()) return;
-  if (std::fabs(bar.cluster_t - bar.cluster_target) < 0.002) {
-    bar.cluster_animating = false;
-    bar.cluster_velocity = 0.0;
-    bar.cluster_timer.disarm();
-    return;
-  }
-  bar.cluster_animating = true;
-  bar.cluster_timer.arm_relative_ms(16, true);
-}
-
-bool App::in_cluster(Bar& bar, double x, double y) {
-  x -= bar.layout.screen_x;
-  const Rect& rect = bar.layout.cluster_rect;
-  if (rect.w <= 0) return false;
-  return x >= rect.x - 4.0 && x <= rect.x + rect.w + 4.0 && y >= 0.0 &&
-         y <= bar.layout.bar_h;
 }
 
 std::vector<std::string> App::tooltip_lines(Item item, Bar& bar) const {

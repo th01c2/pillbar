@@ -68,13 +68,6 @@ struct Bar {
   std::chrono::steady_clock::time_point ws_anim_start;
   TimerFd ws_timer;
 
-  double cluster_t = 0.0;
-  double cluster_velocity = 0.0;
-  double cluster_target = 0.0;
-  bool cluster_split = false;
-  bool cluster_animating = false;
-  TimerFd cluster_timer;
-
   // Hover / tooltip state.
   Item hover = Item::None;
   int hover_ws = -1;
@@ -112,9 +105,6 @@ class App {
   void on_anim_tick(Bar& bar);
   void update_workspace_focus(Bar& bar);
   void on_ws_tick(Bar& bar);
-  void on_cluster_tick(Bar& bar);
-  void set_cluster_split(Bar& bar, bool split);
-  bool in_cluster(Bar& bar, double x, double y);
   void update_tooltip(Bar& bar);
   void show_tooltip(Bar& bar);
   void hide_tooltip(Bar& bar);
