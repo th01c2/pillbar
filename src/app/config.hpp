@@ -54,6 +54,7 @@ struct Config {
   // Icon glyph size as a fraction of the bar height.
   double icon_size_frac = 0.58;
   double font_size_px = 12.0;
+  double clock_font_size_px = 15.0;
   double letter_spacing = 0.05; // +5%
 
   // --- nerd font icons ---

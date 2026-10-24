@@ -54,10 +54,6 @@ struct Bar {
   bool animating = false;
   TimerFd anim_timer;
 
-  enum class Anchor { Center, Left, Right };
-  Anchor anchor = Anchor::Center;
-  int anchor_edge = 0;
-
   // Workspace focus indicator: a single disc that slides between numerals.
   bool ws_focus_valid = false;
   int ws_focus_id = -1;
