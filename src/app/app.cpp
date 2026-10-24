@@ -479,19 +479,25 @@ void App::redraw_bar(Bar& bar, Item items) {
   const int pad = static_cast<int>(std::lround(config_.pill_pad_px));
   const int gap = static_cast<int>(std::lround(config_.item_gap_px));
   int left = pad;
+  int ws_delta = 0;
   for (ItemBox& box : bar.layout.items) {
-    if (box.item == Item::Battery || box.item == Item::Volume || box.item == Item::Wifi) {
+    if (box.item == Item::Battery || box.item == Item::Volume || box.item == Item::Wifi ||
+        box.item == Item::Workspaces) {
+      const int previous_x = box.rect.x;
       box.rect.x = left;
+      if (box.item == Item::Workspaces) ws_delta = box.rect.x - previous_x;
       left += box.rect.w + gap;
     } else if (box.item == Item::Clock) {
       box.rect.x = bar.layout.bar_w - pad - box.rect.w;
     }
   }
+  if (ws_delta != 0) {
+    for (WorkspaceSlot& slot : bar.layout.workspace_slots) slot.cx += ws_delta;
+  }
   if (bar.anim_progress < 1.0) {
-    int ws_delta = 0;
     for (ItemBox& box : bar.layout.items) {
       if (box.item == Item::Battery || box.item == Item::Volume || box.item == Item::Wifi ||
-          box.item == Item::Clock) {
+          box.item == Item::Workspaces || box.item == Item::Clock) {
         continue;
       }
       const auto it = bar.anim_from_x.find(box.item);
@@ -500,11 +506,7 @@ void App::redraw_bar(Bar& bar, Item items) {
       const int screen_x = static_cast<int>(
           std::lround(it->second + (target_screen_x - it->second) * bar.anim_progress));
       const int local_x = screen_x - bar.layout.screen_x;
-      if (box.item == Item::Workspaces) ws_delta += local_x - box.rect.x;
       box.rect.x = local_x;
-    }
-    if (ws_delta != 0) {
-      for (WorkspaceSlot& slot : bar.layout.workspace_slots) slot.cx += ws_delta;
     }
   }
   update_workspace_focus(bar);
