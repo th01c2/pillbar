@@ -55,6 +55,19 @@ struct Bar {
   bool animating = false;
   TimerFd anim_timer;
 
+  // Workspace focus indicator: a single disc that slides between numerals.
+  bool ws_focus_valid = false;
+  int ws_focus_id = -1;
+  double ws_focus_x = 0.0;
+  double ws_focus_d = 0.0;
+  bool ws_animating = false;
+  double ws_anim_from_x = 0.0;
+  double ws_anim_to_x = 0.0;
+  double ws_anim_from_d = 0.0;
+  double ws_anim_to_d = 0.0;
+  std::chrono::steady_clock::time_point ws_anim_start;
+  TimerFd ws_timer;
+
   // Hover / tooltip state.
   Item hover = Item::None;
   int hover_ws = -1;
@@ -90,6 +103,8 @@ class App {
   void redraw_all();
   void update_target_width(Bar& bar);
   void on_anim_tick(Bar& bar);
+  void update_workspace_focus(Bar& bar);
+  void on_ws_tick(Bar& bar);
   void update_tooltip(Bar& bar);
   void show_tooltip(Bar& bar);
   void hide_tooltip(Bar& bar);

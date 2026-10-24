@@ -29,6 +29,11 @@ struct BarLayout {
   std::vector<ItemBox> items;
   std::vector<WorkspaceSlot> workspace_slots;
   int workspace_focused_index = -1;
+  // Animated focus indicator, positioned by the app so it can slide between
+  // workspace numerals instead of jumping.
+  bool ws_focus_visible = false;
+  double ws_focus_x = 0.0;
+  double ws_focus_d = 0.0;
 
   const Rect* rect_for(Item item) const;
   Rect local_bounds() const { return Rect{0, 0, bar_w, bar_h}; }

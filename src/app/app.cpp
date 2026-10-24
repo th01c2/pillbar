@@ -24,6 +24,8 @@ constexpr std::uint32_t kLayerOverlay = ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY;
 // constant means we never re-commit geometry while mapped, so there is no
 // configure/ack race; only the buffer content changes per hover.
 constexpr int kTooltipSurfaceHeight = 260;
+// Workspace focus slide duration; matches the notch resize's motion language.
+constexpr double kWorkspaceAnimSeconds = 0.18;
 
 std::string format_clock_tooltip(const std::string& format) {
   const std::time_t now = std::time(nullptr);
@@ -313,6 +315,12 @@ void App::create_bar(Output& output) {
   });
   bar->anim_timer.disarm();
 
+  loop_.add(bar->ws_timer.get(), EPOLLIN, [this, raw](std::uint32_t) {
+    raw->ws_timer.consume();
+    on_ws_tick(*raw);
+  });
+  bar->ws_timer.disarm();
+
   bars_.push_back(std::move(bar));
 }
 
@@ -321,6 +329,7 @@ void App::destroy_bars() {
     if (bar->hover_delay.valid()) loop_.del(bar->hover_delay.get());
     if (bar->fade_timer.valid()) loop_.del(bar->fade_timer.get());
     if (bar->anim_timer.valid()) loop_.del(bar->anim_timer.get());
+    if (bar->ws_timer.valid()) loop_.del(bar->ws_timer.get());
   }
   bars_.clear();
   tooltip_bar_ = nullptr;
@@ -476,6 +485,7 @@ void App::redraw_bar(Bar& bar, Item items) {
   }
   bar.layout =
       renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
+  update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);
   cairo_t* cr = bar.canvas->begin();
   if (cr == nullptr) {
@@ -542,6 +552,79 @@ void App::on_anim_tick(Bar& bar) {
     bar.anim_timer.disarm();
   }
   redraw_bar(bar, Item::All);
+}
+
+void App::update_workspace_focus(Bar& bar) {
+  const int focus = bar.layout.workspace_focused_index;
+  const bool target_valid =
+      focus >= 0 && static_cast<std::size_t>(focus) < bar.layout.workspace_slots.size();
+  const WorkspaceSlot* target =
+      target_valid ? &bar.layout.workspace_slots[static_cast<std::size_t>(focus)] : nullptr;
+  const int target_id = target != nullptr ? target->id : -1;
+  const double target_x = target != nullptr ? target->cx : 0.0;
+  const double target_d = target != nullptr ? target->diameter : 0.0;
+
+  const bool had_focus = bar.ws_focus_id >= 0;
+  if (!bar.ws_focus_valid) {
+    bar.ws_focus_valid = true;
+    bar.ws_focus_id = target_id;
+    bar.ws_focus_x = target_x;
+    bar.ws_focus_d = target_d;
+  } else if (target_id != bar.ws_focus_id) {
+    bar.ws_focus_id = target_id;
+    if (!had_focus || target_id < 0) {
+      // First real focus (state arrived after the first draw) or focus lost:
+      // place it directly instead of sliding in from an arbitrary point.
+      bar.ws_focus_x = target_x;
+      bar.ws_focus_d = target_d;
+      bar.ws_animating = false;
+      if (bar.ws_timer.valid()) bar.ws_timer.disarm();
+    } else {
+      // Start from wherever the indicator currently is, so a rapid second
+      // switch continues smoothly instead of snapping back.
+      bar.ws_anim_from_x = bar.ws_focus_x;
+      bar.ws_anim_from_d = bar.ws_focus_d;
+      bar.ws_anim_to_x = target_x;
+      bar.ws_anim_to_d = target_d;
+      bar.ws_anim_start = std::chrono::steady_clock::now();
+      bar.ws_animating = true;
+      if (bar.ws_timer.valid()) bar.ws_timer.arm_relative_ms(16, false);
+    }
+  }
+
+  if (bar.ws_animating) {
+    // Follow the row if the pill is still resizing underneath us.
+    bar.ws_anim_to_x = target_x;
+    bar.ws_anim_to_d = target_d;
+    const double elapsed =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - bar.ws_anim_start)
+            .count();
+    double progress = elapsed / kWorkspaceAnimSeconds;
+    if (progress >= 1.0) {
+      progress = 1.0;
+      bar.ws_animating = false;
+      if (bar.ws_timer.valid()) bar.ws_timer.disarm();
+    }
+    const double eased = 1.0 - std::pow(1.0 - progress, 3.0);
+    bar.ws_focus_x = bar.ws_anim_from_x + (bar.ws_anim_to_x - bar.ws_anim_from_x) * eased;
+    bar.ws_focus_d = bar.ws_anim_from_d + (bar.ws_anim_to_d - bar.ws_anim_from_d) * eased;
+  } else {
+    bar.ws_focus_x = target_x;
+    bar.ws_focus_d = target_d;
+  }
+
+  bar.layout.ws_focus_visible = target_valid && bar.ws_focus_valid;
+  bar.layout.ws_focus_x = bar.ws_focus_x;
+  bar.layout.ws_focus_d = bar.ws_focus_d;
+}
+
+void App::on_ws_tick(Bar& bar) {
+  redraw_bar(bar, Item::Workspaces);
+  if (bar.ws_animating) {
+    bar.ws_timer.arm_relative_ms(16, false);
+  } else {
+    bar.ws_timer.disarm();
+  }
 }
 
 std::vector<std::string> App::tooltip_lines(Item item, Bar& bar) const {

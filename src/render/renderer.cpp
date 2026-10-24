@@ -317,7 +317,6 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
     cursor_screen += entry.width + kItemGap;
   }
 
-  std::size_t index = 0;
   for (const ItemBox& box : layout.items) {
     if (box.item != Item::Workspaces) continue;
     const std::vector<WorkspaceDisplay> slots = display_workspaces(config, state);
@@ -340,7 +339,6 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
       }
       layout.workspace_slots.push_back(slot);
     }
-    index = layout.workspace_slots.size();
   }
   return layout;
 }
@@ -501,38 +499,57 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
         break;
       }
       case Item::Workspaces: {
+        // Base discs: occupied or empty. The focus indicator is drawn on top
+        // as a single disc so it can slide between numerals.
         for (const WorkspaceSlot& slot : layout.workspace_slots) {
           const bool valid = slot.state_index >= 0 &&
                              static_cast<std::size_t>(slot.state_index) <
                                  state.workspaces.list.size();
           const WorkspaceState* ws =
               valid ? &state.workspaces.list[static_cast<std::size_t>(slot.state_index)] : nullptr;
-          const int id = slot.id;
-          const bool focused = ws != nullptr && ws->focused;
           const bool occupied = ws != nullptr && ws->occupied;
-          // The focused workspace keeps its purple fill even when it holds no
-          // windows, so the active workspace is always visible.
-          if (focused || occupied) {
-            set_color(cr, focused ? config_->ws_focused : config_->ws_occupied);
-            cairo_arc(cr, slot.cx, slot.cy, slot.diameter / 2.0, 0, 2.0 * kPi);
-            cairo_fill(cr);
-            if (focused && config_->ws_focus_ring) {
-              const double ring_w = std::max(
-                  1.0 / scale_,
-                  std::round(slot.diameter * 0.16 * scale_) / scale_);
-              set_color(cr, config_->ws_focus_ring_color);
-              cairo_set_line_width(cr, ring_w);
-              cairo_arc(cr, slot.cx, slot.cy, slot.diameter / 2.0 - ring_w / 2.0, 0, 2.0 * kPi);
-              cairo_stroke(cr);
-            }
-            text_.draw_center(cr, slot.cx, slot.cy, std::to_string(id),
-                              focused ? config_->ws_focused_text : config_->text);
-          } else {
-            set_color(cr, config_->ws_empty);
-            cairo_arc(cr, slot.cx, slot.cy, slot.diameter / 2.0, 0, 2.0 * kPi);
-            cairo_fill(cr);
-            text_.draw_center(cr, slot.cx, slot.cy, std::to_string(id), config_->dim);
+          set_color(cr, occupied ? config_->ws_occupied : config_->ws_empty);
+          cairo_arc(cr, slot.cx, slot.cy, slot.diameter / 2.0, 0, 2.0 * kPi);
+          cairo_fill(cr);
+        }
+
+        if (layout.ws_focus_visible && layout.ws_focus_d > 0.0) {
+          const double radius = layout.ws_focus_d / 2.0;
+          set_color(cr, config_->ws_focused);
+          cairo_arc(cr, layout.ws_focus_x, center_y, radius, 0.0, 2.0 * kPi);
+          cairo_fill(cr);
+          if (config_->ws_focus_ring) {
+            const double ring_w = std::max(
+                1.0 / scale_, std::round(layout.ws_focus_d * 0.16 * scale_) / scale_);
+            set_color(cr, config_->ws_focus_ring_color);
+            cairo_set_line_width(cr, ring_w);
+            cairo_arc(cr, layout.ws_focus_x, center_y, radius - ring_w / 2.0, 0.0, 2.0 * kPi);
+            cairo_stroke(cr);
           }
+        }
+
+        for (const WorkspaceSlot& slot : layout.workspace_slots) {
+          const bool valid = slot.state_index >= 0 &&
+                             static_cast<std::size_t>(slot.state_index) <
+                                 state.workspaces.list.size();
+          const WorkspaceState* ws =
+              valid ? &state.workspaces.list[static_cast<std::size_t>(slot.state_index)] : nullptr;
+          const bool occupied = ws != nullptr && ws->occupied;
+          Color color = occupied ? config_->text : config_->dim;
+          // Cross-fade the numeral under the sliding disc to the focused text
+          // colour, so the white label hands off smoothly at the midpoint.
+          if (layout.ws_focus_visible && layout.ws_focus_d > 0.0) {
+            double blend = 1.0 - std::fabs(slot.cx - layout.ws_focus_x) /
+                                     (layout.ws_focus_d * 0.62);
+            blend = std::clamp(blend, 0.0, 1.0);
+            blend = blend * blend * (3.0 - 2.0 * blend);
+            const Color& fg = config_->ws_focused_text;
+            color = Color{color.r + (fg.r - color.r) * blend,
+                          color.g + (fg.g - color.g) * blend,
+                          color.b + (fg.b - color.b) * blend,
+                          color.a + (fg.a - color.a) * blend};
+          }
+          text_.draw_center(cr, slot.cx, slot.cy, std::to_string(slot.id), color);
         }
         break;
       }
