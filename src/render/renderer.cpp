@@ -448,18 +448,6 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
   const double center_y = layout.bar_h / 2.0;
 
   for (const ItemBox& box : layout.items) {
-    if (box.alpha <= 0.01) continue;
-    const bool transformed = box.alpha < 0.999 || std::fabs(box.scale_x - 1.0) > 0.001;
-    if (transformed) {
-      cairo_save(cr);
-      cairo_rectangle(cr, box.rect.x - 2, box.rect.y, box.rect.w + 4, box.rect.h);
-      cairo_clip(cr);
-      cairo_push_group(cr);
-      const double center_x = box.rect.x + box.rect.w / 2.0;
-      cairo_translate(cr, center_x, 0.0);
-      cairo_scale(cr, box.scale_x, 1.0);
-      cairo_translate(cr, -center_x, 0.0);
-    }
     const Rect& r = box.rect;
     switch (box.item) {
     case Item::Battery: {
@@ -635,11 +623,6 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
     }
     default:
       break;
-    }
-    if (transformed) {
-      cairo_pop_group_to_source(cr);
-      cairo_paint_with_alpha(cr, std::clamp(box.alpha, 0.0, 1.0));
-      cairo_restore(cr);
     }
   }
   cairo_restore(cr);
