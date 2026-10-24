@@ -71,11 +71,9 @@ struct Bar {
   double cluster_gap = 6.0;
   double cluster_velocity = 0.0;
   double cluster_target = 6.0;
-  double cluster_stretch = 1.0;
   bool cluster_split = false;
   bool cluster_animating = false;
   TimerFd cluster_timer;
-  TimerFd cluster_merge_timer;
 
   // Hover / tooltip state.
   Item hover = Item::None;

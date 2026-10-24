@@ -328,11 +328,6 @@ void App::create_bar(Output& output) {
     on_cluster_tick(*raw);
   });
   bar->cluster_timer.disarm();
-  loop_.add(bar->cluster_merge_timer.get(), EPOLLIN, [this, raw](std::uint32_t) {
-    raw->cluster_merge_timer.consume();
-    set_cluster_split(*raw, false);
-  });
-  bar->cluster_merge_timer.disarm();
 
   bars_.push_back(std::move(bar));
 }
@@ -344,7 +339,6 @@ void App::destroy_bars() {
     if (bar->anim_timer.valid()) loop_.del(bar->anim_timer.get());
     if (bar->ws_timer.valid()) loop_.del(bar->ws_timer.get());
     if (bar->cluster_timer.valid()) loop_.del(bar->cluster_timer.get());
-    if (bar->cluster_merge_timer.valid()) loop_.del(bar->cluster_merge_timer.get());
   }
   bars_.clear();
   tooltip_bar_ = nullptr;
@@ -408,13 +402,6 @@ void App::on_pointer_enter(wl_surface* surface, double x, double y) {
 void App::on_pointer_motion(wl_surface* surface, double x, double y) {
   Bar* bar = bar_for_surface(surface);
   if (bar == nullptr) return;
-  const bool over_cluster = in_cluster(*bar, x, y);
-  if (over_cluster) {
-    if (bar->cluster_merge_timer.valid()) bar->cluster_merge_timer.disarm();
-    if (!bar->cluster_split) set_cluster_split(*bar, true);
-  } else if (bar->cluster_split && bar->cluster_merge_timer.valid()) {
-    bar->cluster_merge_timer.arm_relative_ms(160, true);
-  }
   const int previous_ws = bar->hover_ws;  // hit_test overwrites this
   const Item item = hit_test(*bar, x, y);
   // Clickable items show the hand cursor, everything else the arrow.
@@ -450,14 +437,15 @@ void App::on_pointer_leave(wl_surface* surface) {
   bar->hover_delay.disarm();
   bar->hover = Item::None;
   hide_tooltip(*bar);
-  if (bar->cluster_split && bar->cluster_merge_timer.valid()) {
-    bar->cluster_merge_timer.arm_relative_ms(160, true);
-  }
 }
 
 void App::on_pointer_button(wl_surface* surface, std::uint32_t button, double x, double y) {
   Bar* bar = bar_for_surface(surface);
   if (bar == nullptr) return;
+  if (button == 0x110 /* BTN_LEFT */ && in_cluster(*bar, x, y)) {
+    set_cluster_split(*bar, !bar->cluster_split);
+    return;
+  }
   const Item item = hit_test(*bar, x, y);
   if (item == Item::Workspaces && button == 0x110 /* BTN_LEFT */ && bar->hover_ws >= 0 &&
       static_cast<std::size_t>(bar->hover_ws) < bar->layout.workspace_slots.size()) {
@@ -510,7 +498,7 @@ void App::redraw_bar(Bar& bar, Item items) {
   }
   bar.layout = renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w,
                                         bar.output_h, bar.cluster_gap);
-  bar.layout.cluster_stretch = bar.cluster_stretch;
+  bar.layout.cluster_gap = bar.cluster_gap;
   update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);
   cairo_t* cr = bar.canvas->begin();
@@ -662,18 +650,13 @@ void App::on_cluster_tick(Bar& bar) {
   const double accel = -stiffness * delta - damping * bar.cluster_velocity;
   bar.cluster_velocity += accel * dt;
   bar.cluster_gap += bar.cluster_velocity * dt;
-  bool settled = false;
   if (std::fabs(bar.cluster_gap - bar.cluster_target) < 0.05 &&
       std::fabs(bar.cluster_velocity) < 0.5) {
     bar.cluster_gap = bar.cluster_target;
     bar.cluster_velocity = 0.0;
     bar.cluster_animating = false;
-    settled = true;
     bar.cluster_timer.disarm();
   }
-  bar.cluster_stretch =
-      settled ? 1.0
-              : 1.0 + 0.15 * std::min(1.0, std::fabs(bar.cluster_velocity) / 200.0);
   bar.pill_w = renderer_.desired_width(config_, state_, bar.output_w, bar.cluster_gap);
   bar.pill_target = bar.pill_w;
   bar.animating = false;
@@ -689,7 +672,6 @@ void App::set_cluster_split(Bar& bar, bool split) {
   if (std::fabs(bar.cluster_gap - bar.cluster_target) < 0.01) {
     bar.cluster_animating = false;
     bar.cluster_velocity = 0.0;
-    bar.cluster_stretch = 1.0;
     bar.cluster_timer.disarm();
     return;
   }

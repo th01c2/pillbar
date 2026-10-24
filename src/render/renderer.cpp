@@ -37,6 +37,24 @@ void notch_rect(cairo_t* cr, double x, double y, double w, double h, double r) {
   cairo_close_path(cr);
 }
 
+void rounded_rect_lr(cairo_t* cr, double x, double y, double w, double h, double left,
+                     double right) {
+  const double limit = std::min(w / 2.0, h / 2.0);
+  const double l = std::clamp(left, 0.0, limit);
+  const double r = std::clamp(right, 0.0, limit);
+  cairo_new_sub_path(cr);
+  cairo_move_to(cr, x + l, y);
+  cairo_line_to(cr, x + w - r, y);
+  if (r > 0.0) cairo_arc(cr, x + w - r, y + r, r, -kPi / 2.0, 0.0);
+  cairo_line_to(cr, x + w, y + h - r);
+  if (r > 0.0) cairo_arc(cr, x + w - r, y + h - r, r, 0.0, kPi / 2.0);
+  cairo_line_to(cr, x + l, y + h);
+  if (l > 0.0) cairo_arc(cr, x + l, y + h - l, l, kPi / 2.0, kPi);
+  cairo_line_to(cr, x, y + l);
+  if (l > 0.0) cairo_arc(cr, x + l, y + l, l, kPi, 3.0 * kPi / 2.0);
+  cairo_close_path(cr);
+}
+
 void set_color(cairo_t* cr, const Color& c, double alpha_mul = 1.0) {
   cairo_set_source_rgba(cr, c.r, c.g, c.b, c.a * alpha_mul);
 }
@@ -505,12 +523,20 @@ void Renderer::draw_system_cluster(cairo_t* cr, const BarLayout& layout) {
   cairo_set_source_rgba(mask, 1.0, 1.0, 1.0, 1.0);
   const double capsule_h = std::max(1.0, layout.bar_h - pad * 2.0);
   const double capsule_r = capsule_h / 2.0;
-  const double stretch = std::clamp(layout.cluster_stretch, 1.0, 1.2);
-  for (const Rect* rect : rects) {
+  const double merged = config_->cluster_gap_merged;
+  const double split = config_->cluster_gap_split;
+  const double t = split > merged
+                       ? std::clamp((layout.cluster_gap - merged) / (split - merged), 0.0, 1.0)
+                       : 1.0;
+  const double inner_r = capsule_r * t;
+  for (std::size_t i = 0; i < rects.size(); ++i) {
+    const Rect* rect = rects[i];
     const double center = rect->x + rect->w / 2.0;
-    const double width = (rect->w + pad * 2.0) * stretch;
-    rounded_rect(mask, center - width / 2.0 - left + margin, pad + margin, width, capsule_h,
-                 capsule_r);
+    const double width = rect->w + pad * 2.0;
+    const double left_r = i == 0 ? capsule_r : inner_r;
+    const double right_r = i + 1 == rects.size() ? capsule_r : inner_r;
+    rounded_rect_lr(mask, center - width / 2.0 - left + margin, pad + margin, width, capsule_h,
+                    left_r, right_r);
     cairo_fill(mask);
   }
   cairo_destroy(mask);
