@@ -107,7 +107,7 @@ struct Config {
   Color ws_focused = rgb(0x6f7fd8);
   Color ws_focused_text = rgb(0xffffff);
   bool ws_focus_ring = true;
-  Color ws_focus_ring_color = rgb(0xffffff, 0.45);
+  Color ws_focus_ring_color = rgb(0x8f9cf0, 0.5);
   Color battery_green = rgb(0x3ddc5a);
   Color battery_low = rgb(0xff5555);
   Color battery_charge_fill = rgb(0xffffff, 0.22);
