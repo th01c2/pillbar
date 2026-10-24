@@ -203,7 +203,6 @@ void App::create_bar(Output& output) {
   bar->bar_h = std::max(1, static_cast<int>(std::lround(config_.height_px)));
   bar->pill_w = renderer_.desired_width(config_, state_, bar->output_w);
   bar->pill_target = bar->pill_w;
-  bar->clock_anchor_x = (bar->output_w + static_cast<int>(std::lround(bar->pill_w))) / 2;
   const int top = static_cast<int>(std::lround(bar->output_h * config_.margin_top_frac));
   LOG_DEBUG("creating bar on %s: output=%dx%d pill=%.0fx%d scale=%.2f", output.name().c_str(),
             bar->output_w, bar->output_h, bar->pill_w, bar->bar_h, bar->scale);
@@ -477,21 +476,10 @@ void App::redraw_bar(Bar& bar, Item items) {
     return;
   }
   bar.layout = renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
-  if (bar.clock_anchor_x > 0) {
-    bar.layout.screen_x = bar.clock_anchor_x - bar.layout.bar_w;
-    if (!bar.layout.items.empty()) {
-      double content_right = -1e9;
-      for (const ItemBox& box : bar.layout.items) {
-        content_right =
-            std::max(content_right, static_cast<double>(box.rect.x + box.rect.w));
-      }
-      const int delta = static_cast<int>(std::lround(static_cast<double>(bar.layout.bar_w) -
-                                                     config_.pill_pad_px - content_right));
-      if (delta != 0) {
-        for (ItemBox& box : bar.layout.items) box.rect.x += delta;
-        for (WorkspaceSlot& slot : bar.layout.workspace_slots) slot.cx += delta;
-      }
-    }
+  for (ItemBox& box : bar.layout.items) {
+    if (box.item != Item::Clock) continue;
+    box.rect.x = bar.layout.bar_w - static_cast<int>(std::lround(config_.pill_pad_px)) - box.rect.w;
+    break;
   }
   update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);
