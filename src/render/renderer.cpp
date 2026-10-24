@@ -355,8 +355,6 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
   // rounding the screen position once keeps the text perfectly still and lets
   // the notch edges animate around it.
   double cursor_screen = std::lround((static_cast<double>(output_w) - content) / 2.0);
-  const double min_screen = static_cast<double>(layout.screen_x) + config.pill_pad_px;
-  if (cursor_screen < min_screen) cursor_screen = min_screen;
   const double center_y = static_cast<double>(layout.bar_h) / 2.0;
   for (const Entry& entry : entries) {
     const Rect rect{static_cast<int>(std::lround(cursor_screen)) - layout.screen_x, 0,
