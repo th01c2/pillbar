@@ -115,6 +115,17 @@ std::string wifi_icon(const Config& config, const WifiState& wifi) {
   return config.wifi_levels[static_cast<std::size_t>(level) - 1];
 }
 
+std::string wifi_band_label(const WifiState& wifi) {
+  if (!wifi.connected || wifi.wired) return {};
+  if (wifi.freq >= 5925) return "6";
+  if (wifi.freq >= 4900) return "5";
+  if (wifi.freq >= 2400) return "2.4";
+  if (wifi.band.find("6") != std::string::npos) return "6";
+  if (wifi.band.find("5") != std::string::npos) return "5";
+  if (wifi.band.find("2") != std::string::npos) return "2.4";
+  return {};
+}
+
 // Layout metrics (logical pixels).
 constexpr double kPillPad = 14.0;      // left/right padding inside the pill
 constexpr double kItemGap = 12.0;      // space between items
@@ -199,9 +210,13 @@ double item_width(const Renderer& renderer, const Config& config, const AppState
       if (!state.volume.available) return -1.0;
       return renderer.icon_width(volume_icon(config, state.volume)) + kIconGap +
              renderer.text_width(volume_label(state.volume));
-    case Item::Wifi:
+    case Item::Wifi: {
       if (!state.wifi.present) return -1.0;
-      return renderer.icon_width(wifi_icon(config, state.wifi));
+      double width = renderer.icon_width(wifi_icon(config, state.wifi));
+      const std::string label = wifi_band_label(state.wifi);
+      if (!label.empty()) width += kIconGap + renderer.text_width(label);
+      return width;
+    }
     case Item::Bluetooth:
       if (!state.bluetooth.present) return -1.0;
       return config.height_px * 0.5;
@@ -500,7 +515,14 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
         const std::string glyph = wifi_icon(*config_, state.wifi);
         const Color icon_color =
             (state.wifi.wired || state.wifi.connected) ? config_->text : config_->dim;
-        icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, glyph, icon_color);
+        const std::string label = wifi_band_label(state.wifi);
+        if (label.empty()) {
+          icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, glyph, icon_color);
+        } else {
+          const double glyph_w = icon_text_.measure(glyph);
+          icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, icon_color);
+          text_.draw_left(cr, r.x + glyph_w + kIconGap, center_y, label, config_->dim);
+        }
         break;
       }
       case Item::Bluetooth: {
