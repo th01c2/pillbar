@@ -455,10 +455,6 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
         if (!glyph.empty()) {
           glyph_w = icon_text_.measure(glyph);
           const double glyph_cx = r.x + glyph_w / 2.0;
-          if (state.battery.charging) {
-            icon_text_.draw_center_glow(cr, glyph_cx, center_y, glyph,
-                                        config_->battery_charge_glow);
-          }
           icon_text_.draw_center(cr, glyph_cx, center_y, glyph, color);
           if (state.battery.charging) {
             icon_text_.draw_center_fill(cr, glyph_cx, center_y, glyph,
