@@ -17,7 +17,9 @@ namespace {
 
 // NM_DEVICE_TYPE_WIFI == 2, NM_DEVICE_TYPE_ETHERNET == 1,
 // NM_DEVICE_STATE_ACTIVATED == 100.
-bool nm_device_type_is_ethernet(unsigned type) { return type == 1; }
+bool nm_device_type_is_ethernet(unsigned type) {
+  return type == 1;
+}
 
 bool nm_device_is_activated(DbusBus& bus, const std::string& path) {
   unsigned state = 0;
@@ -74,7 +76,7 @@ std::string format_rate(double bits_per_sec) {
   return buffer;
 }
 
-}  // namespace
+} // namespace
 
 WifiSource::WifiSource(AppState& state, NotifyFn notify, DbusBus& bus)
     : state_(state), notify_(std::move(notify)), bus_(bus) {}
@@ -89,19 +91,19 @@ int WifiSource::on_signal(sd_bus_message* message, void* userdata, sd_bus_error*
 bool WifiSource::start(EventLoop& loop) {
   (void)loop;
   if (!bus_.valid()) return false;
-  bus_.add_match(
-      "type='signal',sender='org.freedesktop.NetworkManager',"
-      "interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'",
-      [this](sd_bus_message* m) { return on_signal(m, this, nullptr); });
-  bus_.add_match(
-      "type='signal',sender='org.freedesktop.NetworkManager',"
-      "interface='org.freedesktop.NetworkManager'",
-      [this](sd_bus_message* m) { return on_signal(m, this, nullptr); });
+  bus_.add_match("type='signal',sender='org.freedesktop.NetworkManager',"
+                 "interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'",
+                 [this](sd_bus_message* m) { return on_signal(m, this, nullptr); });
+  bus_.add_match("type='signal',sender='org.freedesktop.NetworkManager',"
+                 "interface='org.freedesktop.NetworkManager'",
+                 [this](sd_bus_message* m) { return on_signal(m, this, nullptr); });
   rescan();
   return state_.wifi.present;
 }
 
-void WifiSource::refresh() { rescan(); }
+void WifiSource::refresh() {
+  rescan();
+}
 
 void WifiSource::rescan() {
   if (bus_.bus() == nullptr) return;
@@ -257,4 +259,4 @@ void WifiSource::sample_rates() const {
   last_rate_time_ = now;
 }
 
-}  // namespace pillbar
+} // namespace pillbar

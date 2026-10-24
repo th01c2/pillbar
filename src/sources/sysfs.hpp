@@ -13,6 +13,5 @@ bool exists(const std::string& path);
 // Lists immediate entry names (no path prefix) of a directory.
 std::vector<std::string> list_directory(const std::string& path);
 
-}  // namespace sysfs
-}  // namespace pillbar
-
+} // namespace sysfs
+} // namespace pillbar

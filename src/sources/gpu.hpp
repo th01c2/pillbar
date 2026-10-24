@@ -45,4 +45,4 @@ class GpuSource : public Source {
   void* nvml_device_ = nullptr;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

@@ -30,5 +30,4 @@ class BluetoothSource : public Source {
   DbusBus& bus_;
 };
 
-}  // namespace pillbar
-
+} // namespace pillbar

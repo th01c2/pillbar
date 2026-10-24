@@ -63,4 +63,4 @@ class DbusBus {
   std::vector<std::unique_ptr<Handler>> handlers_;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

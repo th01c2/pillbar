@@ -40,4 +40,4 @@ class SourceManager {
   static constexpr int kDebounceMs = 16;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

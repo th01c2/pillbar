@@ -94,8 +94,7 @@ int Canvas::free_index(int except) const {
 
 bool Canvas::resize(int width, int height) {
   if (width <= 0 || height <= 0) return false;
-  if (width == width_ && height == height_ && buffers_[0] != nullptr &&
-      buffers_[1] != nullptr) {
+  if (width == width_ && height == height_ && buffers_[0] != nullptr && buffers_[1] != nullptr) {
     return false;
   }
   if (ctx_ != nullptr) {
@@ -140,7 +139,9 @@ void Canvas::damage(const Rect& rect) {
   if (!rect.empty()) damage_.push_back(rect);
 }
 
-void Canvas::damage_all() { full_damage_ = true; }
+void Canvas::damage_all() {
+  full_damage_ = true;
+}
 
 bool Canvas::commit() {
   if (draw_index_ < 0) return false;
@@ -167,4 +168,4 @@ bool Canvas::commit() {
   return true;
 }
 
-}  // namespace pillbar
+} // namespace pillbar

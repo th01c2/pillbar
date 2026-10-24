@@ -8,10 +8,10 @@
 #include <cstring>
 
 #include "app/logging.hpp"
-#include "wayland/output.hpp"
-#include "wayland/pointer.hpp"
 #include "fractional-scale-v1-client-protocol.h"
 #include "viewporter-client-protocol.h"
+#include "wayland/output.hpp"
+#include "wayland/pointer.hpp"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
 
@@ -25,7 +25,7 @@ void wayland_log_handler(const char* fmt, va_list args) {
   LOG_ERR("wayland: %s", buffer);
 }
 
-}  // namespace
+} // namespace
 
 WaylandDisplay::WaylandDisplay() = default;
 
@@ -63,8 +63,8 @@ void WaylandDisplay::handle_global(uint32_t name, const char* interface, uint32_
   } else if (iface == wl_shm_interface.name) {
     shm_ = static_cast<wl_shm*>(wl_registry_bind(registry_, name, &wl_shm_interface, 1));
   } else if (iface == wl_seat_interface.name) {
-    seat_ = static_cast<wl_seat*>(wl_registry_bind(registry_, name, &wl_seat_interface,
-                                                   std::min(version, 7u)));
+    seat_ = static_cast<wl_seat*>(
+        wl_registry_bind(registry_, name, &wl_seat_interface, std::min(version, 7u)));
     if (pointer_ == nullptr) {
       pointer_ = std::make_unique<Pointer>();
       pointer_->attach(seat_, loop_);
@@ -73,15 +73,14 @@ void WaylandDisplay::handle_global(uint32_t name, const char* interface, uint32_
     layer_shell_ = static_cast<zwlr_layer_shell_v1*>(
         wl_registry_bind(registry_, name, &zwlr_layer_shell_v1_interface, 4));
   } else if (iface == zxdg_output_manager_v1_interface.name) {
-    xdg_output_manager_ = static_cast<zxdg_output_manager_v1*>(
-        wl_registry_bind(registry_, name, &zxdg_output_manager_v1_interface,
-                         std::min(version, 3u)));
+    xdg_output_manager_ = static_cast<zxdg_output_manager_v1*>(wl_registry_bind(
+        registry_, name, &zxdg_output_manager_v1_interface, std::min(version, 3u)));
   } else if (iface == wp_fractional_scale_manager_v1_interface.name) {
-    fractional_scale_manager_ = static_cast<wp_fractional_scale_manager_v1*>(wl_registry_bind(
-        registry_, name, &wp_fractional_scale_manager_v1_interface, 1));
+    fractional_scale_manager_ = static_cast<wp_fractional_scale_manager_v1*>(
+        wl_registry_bind(registry_, name, &wp_fractional_scale_manager_v1_interface, 1));
   } else if (iface == wp_viewporter_interface.name) {
-    viewporter_ = static_cast<wp_viewporter*>(
-        wl_registry_bind(registry_, name, &wp_viewporter_interface, 1));
+    viewporter_ =
+        static_cast<wp_viewporter*>(wl_registry_bind(registry_, name, &wp_viewporter_interface, 1));
   } else if (iface == wl_output_interface.name) {
     auto output = std::make_unique<Output>();
     output->bind(static_cast<wl_output*>(
@@ -195,4 +194,4 @@ const wl_registry_listener WaylandDisplay::registry_listener_ = {
     &WaylandDisplay::registry_global_remove,
 };
 
-}  // namespace pillbar
+} // namespace pillbar

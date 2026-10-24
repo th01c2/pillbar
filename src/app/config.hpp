@@ -27,15 +27,15 @@ struct ItemSlot {
 
 struct Config {
   // --- bar geometry ---
-  double height_px = 30.0;          // logical pixels
-  double margin_top_frac = 0.0;     // fraction of output height
+  double height_px = 30.0;      // logical pixels
+  double margin_top_frac = 0.0; // fraction of output height
   // Notch shape: flush with the screen edge, rounded only on the bottom.
   bool notch = true;
   double notch_radius_px = 12.0;
   std::string namespace_name = "pillbar";
-  std::string monitors = "all";     // all | primary
+  std::string monitors = "all"; // all | primary
 
-  Color bar_color = rgb(0x181818);  // notch fill
+  Color bar_color = rgb(0x181818); // notch fill
   bool shadow = false;
   Color shadow_color = rgb(0x000000, 0.35);
   double shadow_offset_px = 2.0;
@@ -53,31 +53,30 @@ struct Config {
   // Icon glyph size as a fraction of the bar height.
   double icon_size_frac = 0.58;
   double font_size_px = 12.0;
-  double letter_spacing = 0.05;  // +5%
+  double letter_spacing = 0.05; // +5%
 
   // --- nerd font icons ---
   // Battery icons for 10%,20%,...,100% (index 0..9).
-  std::vector<std::string> battery_levels{
-      "\U000F007A", "\U000F007B", "\U000F007C", "\U000F007D", "\U000F007E",
-      "\U000F007F", "\U000F0080", "\U000F0081", "\U000F0082", "\U000F0079"};
+  std::vector<std::string> battery_levels{"\U000F007A", "\U000F007B", "\U000F007C", "\U000F007D",
+                                          "\U000F007E", "\U000F007F", "\U000F0080", "\U000F0081",
+                                          "\U000F0082", "\U000F0079"};
   // Charging battery icons for 10%,20%,...,100% (index 0..9).
-  std::vector<std::string> battery_charging{
-      "\U000F089C", "\U000F0086", "\U000F0087", "\U000F0088", "\U000F089D",
-      "\U000F0089", "\U000F089E", "\U000F008A", "\U000F008B", "\U000F0085"};
+  std::vector<std::string> battery_charging{"\U000F089C", "\U000F0086", "\U000F0087", "\U000F0088",
+                                            "\U000F089D", "\U000F0089", "\U000F089E", "\U000F008A",
+                                            "\U000F008B", "\U000F0085"};
   std::string volume_muted = "\uEEE8";
   std::string volume_low = "\uF027";
   std::string volume_medium = "\uEFCF";
   std::string volume_high = "\uF028";
   // Wi-Fi signal strength for levels 1..4, plus off/disconnected and wired.
-  std::vector<std::string> wifi_levels{"\U000F091F", "\U000F0922", "\U000F0925",
-                                       "\U000F0928"};
+  std::vector<std::string> wifi_levels{"\U000F091F", "\U000F0922", "\U000F0925", "\U000F0928"};
   std::string wifi_off = "\U000F092F";
   std::string wifi_wired = "\U000F0200";
   std::string window_glyph = "\uEA85";
   // Screen-recorder indicator (nf-cod-record U+EBA7; U+EBFA and U+F044A also
   // exist). While recording it pulses from dark red to bright red and back.
   std::string recorder_glyph = "\uEBA7";
-  int recorder_pulse_ms = 2000;  // one dark -> bright -> dark cycle
+  int recorder_pulse_ms = 2000; // one dark -> bright -> dark cycle
   // Cursor size in logical pixels for the hand cursor over clickable items
   // (multiplied by the output scale internally, so it stays crisp on HiDPI).
   // Tune this to match the compositor's cursor: 24 is small, 48 is large.
@@ -114,8 +113,8 @@ struct Config {
   // --- items ---
   // Window item omitted on purpose: the app name + title took the most width
   // for the least information. Add "window" back here to restore it.
-  std::vector<std::string> order{"battery", "volume", "wifi",  "bluetooth", "workspaces",
-                                 "recorder", "clock"};
+  std::vector<std::string> order{"battery",    "volume",   "wifi", "bluetooth",
+                                 "workspaces", "recorder", "clock"};
   std::map<std::string, ItemSlot> slots;
 
   // --- tooltip ---
@@ -126,7 +125,7 @@ struct Config {
   double tooltip_font_size_px = 11.0;
 
   // --- behavior ---
-  bool system_item_tooltip = true;  // CPU/GPU exposed via the clock/system tooltip
+  bool system_item_tooltip = true; // CPU/GPU exposed via the clock/system tooltip
   int min_workspaces = 5;
   std::string clock_tooltip_format = "%A, %d %B %Y  %H:%M:%S";
 };
@@ -134,4 +133,4 @@ struct Config {
 // Fills default item slots matching the reference screenshot.
 void config_apply_default_slots(Config& config);
 
-}  // namespace pillbar
+} // namespace pillbar

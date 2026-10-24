@@ -43,4 +43,4 @@ class CpuSource : public Source {
   bool hovered_ = false;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

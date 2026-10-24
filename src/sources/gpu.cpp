@@ -42,7 +42,7 @@ std::string first_existing(const std::vector<std::string>& candidates) {
   return {};
 }
 
-}  // namespace
+} // namespace
 
 GpuSource::GpuSource(AppState& state, NotifyFn notify)
     : state_(state), notify_(std::move(notify)) {}
@@ -121,7 +121,8 @@ void GpuSource::detect() {
     nvml_ = ::dlopen("libnvidia-ml.so.1", RTLD_NOW | RTLD_LOCAL);
     if (nvml_ != nullptr) {
       auto init = reinterpret_cast<NvmlInitFn>(::dlsym(nvml_, "nvmlInit_v2"));
-      auto handle = reinterpret_cast<NvmlHandleByIndexFn>(::dlsym(nvml_, "nvmlDeviceGetHandleByIndex_v2"));
+      auto handle =
+          reinterpret_cast<NvmlHandleByIndexFn>(::dlsym(nvml_, "nvmlDeviceGetHandleByIndex_v2"));
       if (init != nullptr && handle != nullptr && init() == kNvmlSuccess) {
         if (handle(0, &nvml_device_) == kNvmlSuccess) {
           vendor_ = "nvidia";
@@ -219,4 +220,4 @@ std::vector<std::string> GpuSource::detail() const {
   return lines;
 }
 
-}  // namespace pillbar
+} // namespace pillbar

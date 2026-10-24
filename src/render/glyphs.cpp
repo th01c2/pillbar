@@ -6,12 +6,10 @@ namespace pillbar {
 namespace glyphs {
 namespace {
 
-const PixelGlyph kBluetooth = {
-    {"..#..", "..##.", ".#.#.", "#..##", ".#.#.", "..##.", "..#.."}};
+const PixelGlyph kBluetooth = {{"..#..", "..##.", ".#.#.", "#..##", ".#.#.", "..##.", "..#.."}};
 
-const PixelGlyph kCpu = {
-    {"#.#.#.#.#", ".........", "..#####..", "#.#...#.#", "#.#...#.#",
-     "#.#...#.#", "..#####..", ".........", "#.#.#.#.#"}};
+const PixelGlyph kCpu = {{"#.#.#.#.#", ".........", "..#####..", "#.#...#.#", "#.#...#.#",
+                          "#.#...#.#", "..#####..", ".........", "#.#.#.#.#"}};
 
 void fill_pixel(cairo_t* cr, double x, double y, double px, const Color& color) {
   cairo_set_source_rgba(cr, color.r, color.g, color.b, color.a);
@@ -19,10 +17,14 @@ void fill_pixel(cairo_t* cr, double x, double y, double px, const Color& color) 
   cairo_fill(cr);
 }
 
-}  // namespace
+} // namespace
 
-const PixelGlyph& bluetooth() { return kBluetooth; }
-const PixelGlyph& cpu() { return kCpu; }
+const PixelGlyph& bluetooth() {
+  return kBluetooth;
+}
+const PixelGlyph& cpu() {
+  return kCpu;
+}
 
 void draw(cairo_t* cr, const PixelGlyph& glyph, double x, double y, double px, const Color& color) {
   if (px <= 0.0) return;
@@ -36,5 +38,5 @@ void draw(cairo_t* cr, const PixelGlyph& glyph, double x, double y, double px, c
   }
 }
 
-}  // namespace glyphs
-}  // namespace pillbar
+} // namespace glyphs
+} // namespace pillbar

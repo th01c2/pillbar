@@ -89,4 +89,4 @@ class Output {
   std::string description_;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

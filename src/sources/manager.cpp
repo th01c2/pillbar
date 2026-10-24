@@ -14,7 +14,9 @@ NotifyFn SourceManager::notify_fn() {
   return [this](Item item) { notify(item); };
 }
 
-void SourceManager::add(Source* source) { sources_.push_back(source); }
+void SourceManager::add(Source* source) {
+  sources_.push_back(source);
+}
 
 void SourceManager::notify(Item item) {
   if (item == Item::None) return;
@@ -49,4 +51,4 @@ void SourceManager::refresh_all() {
   }
 }
 
-}  // namespace pillbar
+} // namespace pillbar

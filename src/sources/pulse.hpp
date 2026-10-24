@@ -37,7 +37,7 @@ class PulseLoop {
     pa_time_event_cb_t cb = nullptr;
     void* userdata = nullptr;
     pa_time_event_destroy_cb_t destroy = nullptr;
-    struct timeval tv {};
+    struct timeval tv{};
     TimerFd timer{CLOCK_REALTIME};
   };
   struct DeferEvent {
@@ -76,5 +76,4 @@ class PulseLoop {
   std::vector<DeferEvent*> pending_defers_;
 };
 
-}  // namespace pillbar
-
+} // namespace pillbar

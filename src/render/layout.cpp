@@ -9,4 +9,4 @@ const Rect* BarLayout::rect_for(Item item) const {
   return nullptr;
 }
 
-}  // namespace pillbar
+} // namespace pillbar

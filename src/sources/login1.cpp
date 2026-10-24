@@ -25,5 +25,4 @@ bool Login1Source::start(EventLoop& loop) {
       [this](sd_bus_message* m) { return on_signal(m, this, nullptr); });
 }
 
-}  // namespace pillbar
-
+} // namespace pillbar

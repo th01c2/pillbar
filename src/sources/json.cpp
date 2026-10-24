@@ -69,19 +69,19 @@ class Parser {
     }
     const char c = text_[pos_];
     switch (c) {
-      case '{':
-        return parse_object();
-      case '[':
-        return parse_array();
-      case '"':
-        return parse_string();
-      case 't':
-      case 'f':
-        return parse_bool();
-      case 'n':
-        return parse_null();
-      default:
-        return parse_number();
+    case '{':
+      return parse_object();
+    case '[':
+      return parse_array();
+    case '"':
+      return parse_string();
+    case 't':
+    case 'f':
+      return parse_bool();
+    case 'n':
+      return parse_null();
+    default:
+      return parse_number();
     }
   }
 
@@ -143,47 +143,47 @@ class Parser {
         if (pos_ >= text_.size()) break;
         const char esc = text_[pos_++];
         switch (esc) {
-          case 'n':
-            value.string_value.push_back('\n');
-            break;
-          case 't':
-            value.string_value.push_back('\t');
-            break;
-          case 'r':
-            value.string_value.push_back('\r');
-            break;
-          case 'b':
-            value.string_value.push_back('\b');
-            break;
-          case 'f':
-            value.string_value.push_back('\f');
-            break;
-          case 'u': {
-            if (pos_ + 4 > text_.size()) {
-              fail("bad \\u escape");
+        case 'n':
+          value.string_value.push_back('\n');
+          break;
+        case 't':
+          value.string_value.push_back('\t');
+          break;
+        case 'r':
+          value.string_value.push_back('\r');
+          break;
+        case 'b':
+          value.string_value.push_back('\b');
+          break;
+        case 'f':
+          value.string_value.push_back('\f');
+          break;
+        case 'u': {
+          if (pos_ + 4 > text_.size()) {
+            fail("bad \\u escape");
+            return value;
+          }
+          unsigned code = 0;
+          for (int i = 0; i < 4; ++i) {
+            const char h = text_[pos_++];
+            code <<= 4;
+            if (h >= '0' && h <= '9') {
+              code |= static_cast<unsigned>(h - '0');
+            } else if (h >= 'a' && h <= 'f') {
+              code |= static_cast<unsigned>(h - 'a' + 10);
+            } else if (h >= 'A' && h <= 'F') {
+              code |= static_cast<unsigned>(h - 'A' + 10);
+            } else {
+              fail("bad hex");
               return value;
             }
-            unsigned code = 0;
-            for (int i = 0; i < 4; ++i) {
-              const char h = text_[pos_++];
-              code <<= 4;
-              if (h >= '0' && h <= '9') {
-                code |= static_cast<unsigned>(h - '0');
-              } else if (h >= 'a' && h <= 'f') {
-                code |= static_cast<unsigned>(h - 'a' + 10);
-              } else if (h >= 'A' && h <= 'F') {
-                code |= static_cast<unsigned>(h - 'A' + 10);
-              } else {
-                fail("bad hex");
-                return value;
-              }
-            }
-            append_utf8(&value.string_value, code);
-            break;
           }
-          default:
-            value.string_value.push_back(esc);
-            break;
+          append_utf8(&value.string_value, code);
+          break;
+        }
+        default:
+          value.string_value.push_back(esc);
+          break;
         }
       } else {
         value.string_value.push_back(c);
@@ -255,11 +255,11 @@ class Parser {
   bool ok_ = true;
 };
 
-}  // namespace
+} // namespace
 
 JsonValue json_parse(const std::string& text, std::string* error) {
   Parser parser(text, error);
   return parser.parse();
 }
 
-}  // namespace pillbar
+} // namespace pillbar

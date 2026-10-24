@@ -177,4 +177,4 @@ int SignalFd::read_signal() {
   return static_cast<int>(info.ssi_signo);
 }
 
-}  // namespace pillbar
+} // namespace pillbar

@@ -44,5 +44,4 @@ class PowerSource : public Source {
   double charge_from_ = 0.0;
 };
 
-}  // namespace pillbar
-
+} // namespace pillbar

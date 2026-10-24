@@ -52,8 +52,8 @@ bool DbusBus::open_system(EventLoop& loop) {
 bool DbusBus::add_match(const std::string& match, Handler handler) {
   if (bus_ == nullptr) return false;
   handlers_.push_back(std::make_unique<Handler>(std::move(handler)));
-  const int rc = sd_bus_add_match(bus_, nullptr, match.c_str(), &DbusBus::trampoline,
-                                  handlers_.back().get());
+  const int rc =
+      sd_bus_add_match(bus_, nullptr, match.c_str(), &DbusBus::trampoline, handlers_.back().get());
   if (rc < 0) {
     LOG_WARN("sd_bus_add_match(%s): %s", match.c_str(), std::strerror(-rc));
     handlers_.pop_back();
@@ -98,7 +98,8 @@ bool DbusBus::get_property_string(const char* destination, const char* path, con
   if (bus_ == nullptr) return false;
   sd_bus_error error{};
   sd_bus_message* reply = nullptr;
-  const int rc = sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "s");
+  const int rc =
+      sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "s");
   if (rc < 0) {
     sd_bus_error_free(&error);
     return false;
@@ -138,7 +139,8 @@ bool DbusBus::get_property_bool(const char* destination, const char* path, const
   if (bus_ == nullptr) return false;
   sd_bus_error error{};
   sd_bus_message* reply = nullptr;
-  const int rc = sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "b");
+  const int rc =
+      sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "b");
   if (rc < 0) {
     sd_bus_error_free(&error);
     return false;
@@ -155,7 +157,8 @@ bool DbusBus::get_property_int(const char* destination, const char* path, const 
   if (bus_ == nullptr) return false;
   sd_bus_error error{};
   sd_bus_message* reply = nullptr;
-  const int rc = sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "i");
+  const int rc =
+      sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "i");
   if (rc < 0) {
     sd_bus_error_free(&error);
     return false;
@@ -172,7 +175,8 @@ bool DbusBus::get_property_uint(const char* destination, const char* path, const
   if (bus_ == nullptr) return false;
   sd_bus_error error{};
   sd_bus_message* reply = nullptr;
-  const int rc = sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "u");
+  const int rc =
+      sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "u");
   if (rc < 0) {
     sd_bus_error_free(&error);
     return false;
@@ -189,7 +193,8 @@ bool DbusBus::get_property_byte(const char* destination, const char* path, const
   if (bus_ == nullptr) return false;
   sd_bus_error error{};
   sd_bus_message* reply = nullptr;
-  const int rc = sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "y");
+  const int rc =
+      sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "y");
   if (rc < 0) {
     sd_bus_error_free(&error);
     return false;
@@ -206,7 +211,8 @@ bool DbusBus::get_property_bytes(const char* destination, const char* path, cons
   if (bus_ == nullptr) return false;
   sd_bus_error error{};
   sd_bus_message* reply = nullptr;
-  const int rc = sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "ay");
+  const int rc =
+      sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "ay");
   if (rc < 0) {
     sd_bus_error_free(&error);
     return false;
@@ -227,11 +233,11 @@ bool DbusBus::call_method(const char* destination, const char* path, const char*
   va_list args;
   va_start(args, types);
   sd_bus_error error{};
-  const int rc = sd_bus_call_methodv(bus_, destination, path, interface, member, &error, reply, types,
-                                     args);
+  const int rc =
+      sd_bus_call_methodv(bus_, destination, path, interface, member, &error, reply, types, args);
   va_end(args);
   sd_bus_error_free(&error);
   return rc >= 0;
 }
 
-}  // namespace pillbar
+} // namespace pillbar

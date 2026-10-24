@@ -48,4 +48,4 @@ class AudioSource : public Source {
   std::string default_sink_;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

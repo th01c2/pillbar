@@ -26,7 +26,9 @@ enum class Item : std::uint32_t {
 inline Item operator|(Item a, Item b) {
   return static_cast<Item>(static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b));
 }
-inline Item& operator|=(Item& a, Item b) { return a = a | b; }
+inline Item& operator|=(Item& a, Item b) {
+  return a = a | b;
+}
 inline bool has_item(Item set, Item bit) {
   return (static_cast<std::uint32_t>(set) & static_cast<std::uint32_t>(bit)) != 0;
 }
@@ -37,10 +39,10 @@ struct BatteryState {
   bool charging = false;
   bool full = false;
   bool ac_online = false;
-  long energy_now = 0;   // uWh
-  long energy_full = 0;  // uWh
-  long power_now = 0;    // uW
-  int health = 0;        // percent
+  long energy_now = 0;  // uWh
+  long energy_full = 0; // uWh
+  long power_now = 0;   // uW
+  int health = 0;       // percent
   double shimmer = 0.0;
   double charge_mix = 0.0;
   bool operator==(const BatteryState&) const = default;
@@ -58,15 +60,15 @@ struct VolumeState {
 struct WifiState {
   bool present = false;
   bool connected = false;
-  bool wired = false;  // an ethernet device is up/configured
+  bool wired = false; // an ethernet device is up/configured
   bool enabled = true;
-  int signal = 0;  // 0..100
+  int signal = 0; // 0..100
   std::string ssid;
   std::string ifname;
   std::string wired_ifname;
   std::string band;
-  int freq = 0;  // MHz
-  int rate = 0;  // kbit/s
+  int freq = 0; // MHz
+  int rate = 0; // kbit/s
   bool operator==(const WifiState&) const = default;
 };
 
@@ -74,7 +76,7 @@ struct BluetoothDevice {
   std::string name;
   std::string address;
   bool connected = false;
-  int battery = -1;  // -1 unknown
+  int battery = -1; // -1 unknown
   bool operator==(const BluetoothDevice&) const = default;
 };
 
@@ -96,7 +98,7 @@ struct WorkspaceState {
 };
 
 struct WorkspacesState {
-  std::vector<WorkspaceState> list;  // ordered by numeric id, includes empty 1..5
+  std::vector<WorkspaceState> list; // ordered by numeric id, includes empty 1..5
   bool operator==(const WorkspacesState&) const = default;
 };
 
@@ -117,15 +119,15 @@ struct ClockState {
 
 struct RecorderState {
   bool active = false;
-  std::string process;  // e.g. "wl-screenrec"
-  std::string target;   // "monitor eDP-1", "window <title>", ...
+  std::string process; // e.g. "wl-screenrec"
+  std::string target;  // "monitor eDP-1", "window <title>", ...
   int pid = 0;
-  double pulse = 0.0;   // 0 = dark red, 1 = bright red
+  double pulse = 0.0; // 0 = dark red, 1 = bright red
   bool operator==(const RecorderState&) const = default;
 };
 
 struct CpuCoreState {
-  double usage = 0.0;  // percent
+  double usage = 0.0; // percent
   bool operator==(const CpuCoreState&) const = default;
 };
 
@@ -140,11 +142,11 @@ struct CpuState {
 
 struct GpuState {
   bool present = false;
-  std::string vendor;         // amd / nvidia / intel
-  double temperature = 0.0;   // Celsius
-  double utilization = 0.0;   // percent
-  long vram_used = 0;         // bytes
-  long vram_total = 0;        // bytes
+  std::string vendor;       // amd / nvidia / intel
+  double temperature = 0.0; // Celsius
+  double utilization = 0.0; // percent
+  long vram_used = 0;       // bytes
+  long vram_total = 0;      // bytes
   bool operator==(const GpuState&) const = default;
 };
 
@@ -163,4 +165,4 @@ struct AppState {
   RecorderState recorder;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

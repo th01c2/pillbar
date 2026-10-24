@@ -17,4 +17,4 @@ void config_apply_default_slots(Config& config) {
   config.slots["recorder"] = ItemSlot{true};
 }
 
-}  // namespace pillbar
+} // namespace pillbar

@@ -43,4 +43,4 @@ class WifiSource : public Source {
   mutable double tx_rate_bps_ = 0.0;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

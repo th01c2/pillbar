@@ -12,7 +12,8 @@ namespace {
 
 pa_io_event_flags_t to_pa_flags(std::uint32_t epoll_events) {
   pa_io_event_flags_t flags = PA_IO_EVENT_NULL;
-  if ((epoll_events & EPOLLIN) != 0) flags = static_cast<pa_io_event_flags_t>(flags | PA_IO_EVENT_INPUT);
+  if ((epoll_events & EPOLLIN) != 0)
+    flags = static_cast<pa_io_event_flags_t>(flags | PA_IO_EVENT_INPUT);
   if ((epoll_events & EPOLLOUT) != 0)
     flags = static_cast<pa_io_event_flags_t>(flags | PA_IO_EVENT_OUTPUT);
   if ((epoll_events & EPOLLHUP) != 0)
@@ -30,7 +31,7 @@ std::uint32_t to_epoll_flags(pa_io_event_flags_t flags) {
   return mask;
 }
 
-}  // namespace
+} // namespace
 
 PulseLoop::PulseLoop(EventLoop& loop) : loop_(loop) {
   api_.userdata = this;
@@ -204,4 +205,4 @@ void PulseLoop::run_deferred() {
   }
 }
 
-}  // namespace pillbar
+} // namespace pillbar

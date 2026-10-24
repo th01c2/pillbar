@@ -19,25 +19,25 @@ int BluetoothSource::on_signal(sd_bus_message*, void* userdata, sd_bus_error*) {
 bool BluetoothSource::start(EventLoop& loop) {
   (void)loop;
   if (!bus_.valid()) return false;
-  bus_.add_match(
-      "type='signal',sender='org.bluez',"
-      "interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'",
-      [this](sd_bus_message* m) { return on_signal(m, this, nullptr); });
-  bus_.add_match(
-      "type='signal',sender='org.bluez',"
-      "interface='org.freedesktop.DBus.ObjectManager'",
-      [this](sd_bus_message* m) { return on_signal(m, this, nullptr); });
+  bus_.add_match("type='signal',sender='org.bluez',"
+                 "interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'",
+                 [this](sd_bus_message* m) { return on_signal(m, this, nullptr); });
+  bus_.add_match("type='signal',sender='org.bluez',"
+                 "interface='org.freedesktop.DBus.ObjectManager'",
+                 [this](sd_bus_message* m) { return on_signal(m, this, nullptr); });
   rescan();
   return state_.bluetooth.present;
 }
 
-void BluetoothSource::refresh() { rescan(); }
+void BluetoothSource::refresh() {
+  rescan();
+}
 
 void BluetoothSource::rescan() {
   if (bus_.bus() == nullptr) return;
   sd_bus_message* reply = nullptr;
-  if (!bus_.call_method("org.bluez", "/", "org.freedesktop.DBus.ObjectManager",
-                        "GetManagedObjects", &reply, "")) {
+  if (!bus_.call_method("org.bluez", "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects",
+                        &reply, "")) {
     if (state_.bluetooth.present) {
       state_.bluetooth = BluetoothState{};
       if (notify_) notify_(Item::Bluetooth);
@@ -150,5 +150,4 @@ std::vector<std::string> BluetoothSource::detail() const {
   return lines;
 }
 
-}  // namespace pillbar
-
+} // namespace pillbar

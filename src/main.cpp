@@ -8,18 +8,17 @@
 namespace {
 
 void print_usage(const char* argv0) {
-  std::printf(
-      "pillbar - floating pill-shaped Wayland status bar for Hyprland\n"
-      "\n"
-      "Usage: %s [--help] [--version]\n"
-      "\n"
-      "Environment:\n"
-      "  PILLBAR_LOG=error|warn|info|debug   log verbosity (default warn)\n"
-      "  HYPRLAND_INSTANCE_SIGNATURE         required for the Hyprland source\n",
-      argv0);
+  std::printf("pillbar - floating pill-shaped Wayland status bar for Hyprland\n"
+              "\n"
+              "Usage: %s [--help] [--version]\n"
+              "\n"
+              "Environment:\n"
+              "  PILLBAR_LOG=error|warn|info|debug   log verbosity (default warn)\n"
+              "  HYPRLAND_INSTANCE_SIGNATURE         required for the Hyprland source\n",
+              argv0);
 }
 
-}  // namespace
+} // namespace
 
 int main(int argc, char** argv) {
   for (int i = 1; i < argc; ++i) {
@@ -45,4 +44,3 @@ int main(int argc, char** argv) {
     return 1;
   }
 }
-

@@ -74,7 +74,9 @@ std::string truncate_chars(const std::string& input, int max_chars) {
   return input;
 }
 
-std::string format_percent(int value) { return std::to_string(value) + "%"; }
+std::string format_percent(int value) {
+  return std::to_string(value) + "%";
+}
 
 std::string format_clock(const ClockState& clock) {
   char buffer[8];
@@ -89,12 +91,10 @@ int battery_icon_index(int percent) {
 
 std::string battery_icon(const Config& config, const BatteryState& battery) {
   const bool charging = battery.charging || battery.full;
-  const std::vector<std::string>& set =
-      charging ? config.battery_charging : config.battery_levels;
+  const std::vector<std::string>& set = charging ? config.battery_charging : config.battery_levels;
   if (set.empty()) return {};
-  const std::size_t index =
-      std::min<std::size_t>(static_cast<std::size_t>(battery_icon_index(battery.percent)),
-                            set.size() - 1);
+  const std::size_t index = std::min<std::size_t>(
+      static_cast<std::size_t>(battery_icon_index(battery.percent)), set.size() - 1);
   return set[index];
 }
 
@@ -110,8 +110,8 @@ std::string wifi_icon(const Config& config, const WifiState& wifi) {
   if (wifi.wired) return config.wifi_wired;
   if (!wifi.connected) return config.wifi_off;
   if (config.wifi_levels.empty()) return config.wifi_off;
-  const int level = std::clamp((wifi.signal + 12) / 25, 1,
-                               static_cast<int>(config.wifi_levels.size()));
+  const int level =
+      std::clamp((wifi.signal + 12) / 25, 1, static_cast<int>(config.wifi_levels.size()));
   return config.wifi_levels[static_cast<std::size_t>(level) - 1];
 }
 
@@ -127,10 +127,10 @@ std::string wifi_band_label(const WifiState& wifi) {
 }
 
 // Layout metrics (logical pixels).
-constexpr double kPillPad = 14.0;      // left/right padding inside the pill
-constexpr double kItemGap = 12.0;      // space between items
-constexpr double kIconGap = 6.0;       // icon -> label inside an item
-constexpr double kNameTitleGap = 8.0;  // app name -> window title
+constexpr double kPillPad = 14.0;     // left/right padding inside the pill
+constexpr double kItemGap = 12.0;     // space between items
+constexpr double kIconGap = 6.0;      // icon -> label inside an item
+constexpr double kNameTitleGap = 8.0; // app name -> window title
 constexpr int kAppNameMaxChars = 20;
 
 Item item_of(const std::string& name) {
@@ -202,59 +202,58 @@ std::string volume_label(const VolumeState& volume) {
 double item_width(const Renderer& renderer, const Config& config, const AppState& state,
                   Item item) {
   switch (item) {
-    case Item::Battery:
-      if (!state.battery.present) return -1.0;
-      return renderer.icon_width(battery_icon(config, state.battery)) + kIconGap +
-             renderer.text_width(format_percent(state.battery.percent));
-    case Item::Volume:
-      if (!state.volume.available) return -1.0;
-      return renderer.icon_width(volume_icon(config, state.volume)) + kIconGap +
-             renderer.text_width(volume_label(state.volume));
-    case Item::Wifi: {
-      if (!state.wifi.present) return -1.0;
-      double width = renderer.icon_width(wifi_icon(config, state.wifi));
-      const std::string label = wifi_band_label(state.wifi);
-      if (!label.empty()) width += kIconGap + renderer.text_width(label);
-      return width;
-    }
-    case Item::Bluetooth:
-      if (!state.bluetooth.present) return -1.0;
-      return config.height_px * 0.5;
-    case Item::Workspaces: {
-      const std::size_t count = display_workspaces(config, state).size();
-      if (count == 0) return -1.0;
-      const double diameter = std::min(20.0, config.height_px * 0.62);
-      return static_cast<double>(count) * diameter * 1.35;
-    }
-    case Item::ActiveWindow: {
-      if (!state.window.present) return -1.0;
-      double width = renderer.icon_width(config.window_glyph) + kIconGap;
-      const std::string name = window_name_text(state.window);
-      if (!name.empty()) width += renderer.text_width(name) + kNameTitleGap;
-      width += renderer.text_width(window_title_text(config, state.window));
-      return width;
-    }
-    case Item::Clock:
-      return renderer.text_width(format_clock(state.clock));
-    case Item::Recorder:
-      if (!state.recorder.active) return -1.0;
-      return renderer.icon_width(config.recorder_glyph);
-    default:
-      return -1.0;
+  case Item::Battery:
+    if (!state.battery.present) return -1.0;
+    return renderer.icon_width(battery_icon(config, state.battery)) + kIconGap +
+           renderer.text_width(format_percent(state.battery.percent));
+  case Item::Volume:
+    if (!state.volume.available) return -1.0;
+    return renderer.icon_width(volume_icon(config, state.volume)) + kIconGap +
+           renderer.text_width(volume_label(state.volume));
+  case Item::Wifi: {
+    if (!state.wifi.present) return -1.0;
+    double width = renderer.icon_width(wifi_icon(config, state.wifi));
+    const std::string label = wifi_band_label(state.wifi);
+    if (!label.empty()) width += kIconGap + renderer.text_width(label);
+    return width;
+  }
+  case Item::Bluetooth:
+    if (!state.bluetooth.present) return -1.0;
+    return config.height_px * 0.5;
+  case Item::Workspaces: {
+    const std::size_t count = display_workspaces(config, state).size();
+    if (count == 0) return -1.0;
+    const double diameter = std::min(20.0, config.height_px * 0.62);
+    return static_cast<double>(count) * diameter * 1.35;
+  }
+  case Item::ActiveWindow: {
+    if (!state.window.present) return -1.0;
+    double width = renderer.icon_width(config.window_glyph) + kIconGap;
+    const std::string name = window_name_text(state.window);
+    if (!name.empty()) width += renderer.text_width(name) + kNameTitleGap;
+    width += renderer.text_width(window_title_text(config, state.window));
+    return width;
+  }
+  case Item::Clock:
+    return renderer.text_width(format_clock(state.clock));
+  case Item::Recorder:
+    if (!state.recorder.active) return -1.0;
+    return renderer.icon_width(config.recorder_glyph);
+  default:
+    return -1.0;
   }
 }
 
-}  // namespace
+} // namespace
 
 void Renderer::configure(const Config& config) {
   config_ = &config;
-  text_.configure(config.fonts, config.font_size_px, config.letter_spacing,
-                  config.smooth_text);
-  icon_text_.configure(config.icon_fonts,
-                       std::max(1.0, config.height_px * config.icon_size_frac), 0.0,
+  text_.configure(config.fonts, config.font_size_px, config.letter_spacing, config.smooth_text);
+  icon_text_.configure(config.icon_fonts, std::max(1.0, config.height_px * config.icon_size_frac),
+                       0.0,
                        /*antialias=*/true);
-  tooltip_text_.configure(config.fonts, config.tooltip_font_size_px,
-                          config.letter_spacing, config.smooth_text);
+  tooltip_text_.configure(config.fonts, config.tooltip_font_size_px, config.letter_spacing,
+                          config.smooth_text);
 }
 
 double Renderer::desired_width(const Config& config, const AppState& state, int output_w) const {
@@ -335,9 +334,8 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
     const std::vector<WorkspaceDisplay> slots = display_workspaces(config, state);
     const int count = static_cast<int>(slots.size());
     if (count <= 0) continue;
-    const double diameter =
-        std::min(20.0, std::min(static_cast<double>(box.rect.w) / count * 1.1,
-                                config.height_px * 0.62));
+    const double diameter = std::min(
+        20.0, std::min(static_cast<double>(box.rect.w) / count * 1.1, config.height_px * 0.62));
     for (int i = 0; i < count; ++i) {
       WorkspaceSlot slot;
       slot.cx = static_cast<double>(box.rect.x) +
@@ -382,8 +380,8 @@ TooltipMetrics Renderer::measure_tooltip(const std::vector<std::string>& lines) 
     widest = std::max(widest, scaled);
   }
   metrics.width = widest + config_->tooltip_pad_px * 2.0;
-  metrics.height = static_cast<double>(lines.size()) * metrics.line_height +
-                   config_->tooltip_pad_px * 2.0;
+  metrics.height =
+      static_cast<double>(lines.size()) * metrics.line_height + config_->tooltip_pad_px * 2.0;
   return metrics;
 }
 
@@ -464,201 +462,194 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
     }
     const Rect& r = box.rect;
     switch (box.item) {
-      case Item::Battery: {
-        if (!state.battery.present) break;
-        const Color base = state.battery.percent <= config_->battery_low_percent
-                               ? config_->battery_low
-                               : config_->text;
-        const double mix = std::clamp(state.battery.charge_mix, 0.0, 1.0);
-        const Color color{base.r + (config_->battery_green.r - base.r) * mix,
-                          base.g + (config_->battery_green.g - base.g) * mix,
-                          base.b + (config_->battery_green.b - base.b) * mix,
-                          base.a + (config_->battery_green.a - base.a) * mix};
-        const std::string glyph = battery_icon(*config_, state.battery);
-        double glyph_w = 0.0;
-        if (!glyph.empty()) {
-          glyph_w = icon_text_.measure(glyph);
-          const double glyph_cx = r.x + glyph_w / 2.0;
-          icon_text_.draw_center(cr, glyph_cx, center_y, glyph, color);
-          if (state.battery.charging) {
-            icon_text_.draw_center_fill(cr, glyph_cx, center_y, glyph,
-                                        config_->battery_charge_fill, state.battery.shimmer);
-          }
-        }
-        const double text_x = r.x + glyph_w + kIconGap;
-        const std::string label = format_percent(state.battery.percent);
-        text_.draw_left(cr, text_x, center_y, label, color);
+    case Item::Battery: {
+      if (!state.battery.present) break;
+      const Color base = state.battery.percent <= config_->battery_low_percent
+                             ? config_->battery_low
+                             : config_->text;
+      const double mix = std::clamp(state.battery.charge_mix, 0.0, 1.0);
+      const Color color{base.r + (config_->battery_green.r - base.r) * mix,
+                        base.g + (config_->battery_green.g - base.g) * mix,
+                        base.b + (config_->battery_green.b - base.b) * mix,
+                        base.a + (config_->battery_green.a - base.a) * mix};
+      const std::string glyph = battery_icon(*config_, state.battery);
+      double glyph_w = 0.0;
+      if (!glyph.empty()) {
+        glyph_w = icon_text_.measure(glyph);
+        const double glyph_cx = r.x + glyph_w / 2.0;
+        icon_text_.draw_center(cr, glyph_cx, center_y, glyph, color);
         if (state.battery.charging) {
-          text_.draw_left_fill(cr, text_x, center_y, label, config_->battery_charge_fill,
-                               state.battery.shimmer);
+          icon_text_.draw_center_fill(cr, glyph_cx, center_y, glyph, config_->battery_charge_fill,
+                                      state.battery.shimmer);
         }
-        break;
       }
-      case Item::Volume: {
-        if (!state.volume.available) break;
-        const Color icon_color = state.volume.muted ? config_->dim : config_->speaker;
-        const std::string glyph = volume_icon(*config_, state.volume);
-        double glyph_w = 0.0;
-        if (!glyph.empty()) {
-          glyph_w = icon_text_.measure(glyph);
-          icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, icon_color);
-        }
-        const double text_x = r.x + glyph_w + kIconGap;
-        const std::string label = volume_label(state.volume);
-        text_.draw_left(cr, text_x, center_y, label,
-                        state.volume.muted ? config_->dim : config_->text);
-        break;
+      const double text_x = r.x + glyph_w + kIconGap;
+      const std::string label = format_percent(state.battery.percent);
+      text_.draw_left(cr, text_x, center_y, label, color);
+      if (state.battery.charging) {
+        text_.draw_left_fill(cr, text_x, center_y, label, config_->battery_charge_fill,
+                             state.battery.shimmer);
       }
-      case Item::Wifi: {
-        if (!state.wifi.present) break;
-        const std::string glyph = wifi_icon(*config_, state.wifi);
-        const Color icon_color =
-            (state.wifi.wired || state.wifi.connected) ? config_->text : config_->dim;
-        const std::string label = wifi_band_label(state.wifi);
-        if (label.empty()) {
-          icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, glyph, icon_color);
-        } else {
-          const double glyph_w = icon_text_.measure(glyph);
-          icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, icon_color);
-          text_.draw_left(cr, r.x + glyph_w + kIconGap, center_y, label, config_->text);
-        }
-        break;
+      break;
+    }
+    case Item::Volume: {
+      if (!state.volume.available) break;
+      const Color icon_color = state.volume.muted ? config_->dim : config_->speaker;
+      const std::string glyph = volume_icon(*config_, state.volume);
+      double glyph_w = 0.0;
+      if (!glyph.empty()) {
+        glyph_w = icon_text_.measure(glyph);
+        icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, icon_color);
       }
-      case Item::Bluetooth: {
-        if (!state.bluetooth.present) break;
-        const double glyph_px = std::max(1.0, std::round((r.w * 0.020 / 5.0) * scale_) / scale_);
-        const double glyph_h = 7.0 * glyph_px;
-        const double gy = center_y - glyph_h / 2.0;
-        bool any_connected = false;
-        for (const BluetoothDevice& device : state.bluetooth.devices) {
-          if (device.connected) any_connected = true;
-        }
-        const Color color = any_connected
-                                ? config_->window_icon
-                                : (state.bluetooth.powered ? config_->text : config_->dim);
-        glyphs::draw(cr, glyphs::bluetooth(), r.x, gy, glyph_px, color);
-        break;
+      const double text_x = r.x + glyph_w + kIconGap;
+      const std::string label = volume_label(state.volume);
+      text_.draw_left(cr, text_x, center_y, label,
+                      state.volume.muted ? config_->dim : config_->text);
+      break;
+    }
+    case Item::Wifi: {
+      if (!state.wifi.present) break;
+      const std::string glyph = wifi_icon(*config_, state.wifi);
+      const Color icon_color =
+          (state.wifi.wired || state.wifi.connected) ? config_->text : config_->dim;
+      const std::string label = wifi_band_label(state.wifi);
+      if (label.empty()) {
+        icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, glyph, icon_color);
+      } else {
+        const double glyph_w = icon_text_.measure(glyph);
+        icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, icon_color);
+        text_.draw_left(cr, r.x + glyph_w + kIconGap, center_y, label, config_->text);
       }
-      case Item::Workspaces: {
-        // Base discs: occupied or empty. The focus indicator is drawn on top
-        // as a single disc so it can slide between numerals.
-        for (const WorkspaceSlot& slot : layout.workspace_slots) {
-          const bool valid = slot.state_index >= 0 &&
-                             static_cast<std::size_t>(slot.state_index) <
-                                 state.workspaces.list.size();
-          const WorkspaceState* ws =
-              valid ? &state.workspaces.list[static_cast<std::size_t>(slot.state_index)] : nullptr;
-          const bool occupied = ws != nullptr && ws->occupied;
-          set_color(cr, occupied ? config_->ws_occupied : config_->ws_empty);
-          cairo_arc(cr, slot.cx, slot.cy, slot.diameter / 2.0, 0, 2.0 * kPi);
-          cairo_fill(cr);
-        }
+      break;
+    }
+    case Item::Bluetooth: {
+      if (!state.bluetooth.present) break;
+      const double glyph_px = std::max(1.0, std::round((r.w * 0.020 / 5.0) * scale_) / scale_);
+      const double glyph_h = 7.0 * glyph_px;
+      const double gy = center_y - glyph_h / 2.0;
+      bool any_connected = false;
+      for (const BluetoothDevice& device : state.bluetooth.devices) {
+        if (device.connected) any_connected = true;
+      }
+      const Color color = any_connected ? config_->window_icon
+                                        : (state.bluetooth.powered ? config_->text : config_->dim);
+      glyphs::draw(cr, glyphs::bluetooth(), r.x, gy, glyph_px, color);
+      break;
+    }
+    case Item::Workspaces: {
+      // Base discs: occupied or empty. The focus indicator is drawn on top
+      // as a single disc so it can slide between numerals.
+      for (const WorkspaceSlot& slot : layout.workspace_slots) {
+        const bool valid = slot.state_index >= 0 && static_cast<std::size_t>(slot.state_index) <
+                                                        state.workspaces.list.size();
+        const WorkspaceState* ws =
+            valid ? &state.workspaces.list[static_cast<std::size_t>(slot.state_index)] : nullptr;
+        const bool occupied = ws != nullptr && ws->occupied;
+        set_color(cr, occupied ? config_->ws_occupied : config_->ws_empty);
+        cairo_arc(cr, slot.cx, slot.cy, slot.diameter / 2.0, 0, 2.0 * kPi);
+        cairo_fill(cr);
+      }
 
+      if (layout.ws_focus_visible && layout.ws_focus_d > 0.0) {
+        const double radius = layout.ws_focus_d / 2.0;
+        set_color(cr, config_->ws_focused);
+        cairo_arc(cr, layout.ws_focus_x, center_y, radius, 0.0, 2.0 * kPi);
+        cairo_fill(cr);
+        if (config_->ws_focus_ring) {
+          const double ring_w =
+              std::max(1.0 / scale_, std::round(layout.ws_focus_d * 0.10 * scale_) / scale_);
+          set_color(cr, config_->ws_focus_ring_color);
+          cairo_set_line_width(cr, ring_w);
+          cairo_arc(cr, layout.ws_focus_x, center_y, radius + ring_w / 2.0, 0.0, 2.0 * kPi);
+          cairo_stroke(cr);
+        }
+      }
+
+      for (const WorkspaceSlot& slot : layout.workspace_slots) {
+        const bool valid = slot.state_index >= 0 && static_cast<std::size_t>(slot.state_index) <
+                                                        state.workspaces.list.size();
+        const WorkspaceState* ws =
+            valid ? &state.workspaces.list[static_cast<std::size_t>(slot.state_index)] : nullptr;
+        const bool occupied = ws != nullptr && ws->occupied;
+        Color color = occupied ? config_->text : config_->dim;
+        // Cross-fade the numeral under the sliding disc to the focused text
+        // colour, so the white label hands off smoothly at the midpoint.
         if (layout.ws_focus_visible && layout.ws_focus_d > 0.0) {
-          const double radius = layout.ws_focus_d / 2.0;
-          set_color(cr, config_->ws_focused);
-          cairo_arc(cr, layout.ws_focus_x, center_y, radius, 0.0, 2.0 * kPi);
-          cairo_fill(cr);
-          if (config_->ws_focus_ring) {
-            const double ring_w = std::max(
-                1.0 / scale_, std::round(layout.ws_focus_d * 0.10 * scale_) / scale_);
-            set_color(cr, config_->ws_focus_ring_color);
-            cairo_set_line_width(cr, ring_w);
-            cairo_arc(cr, layout.ws_focus_x, center_y, radius + ring_w / 2.0, 0.0, 2.0 * kPi);
-            cairo_stroke(cr);
-          }
+          double blend = 1.0 - std::fabs(slot.cx - layout.ws_focus_x) / (layout.ws_focus_d * 0.62);
+          blend = std::clamp(blend, 0.0, 1.0);
+          blend = blend * blend * (3.0 - 2.0 * blend);
+          const Color& fg = config_->ws_focused_text;
+          color = Color{color.r + (fg.r - color.r) * blend, color.g + (fg.g - color.g) * blend,
+                        color.b + (fg.b - color.b) * blend, color.a + (fg.a - color.a) * blend};
         }
-
-        for (const WorkspaceSlot& slot : layout.workspace_slots) {
-          const bool valid = slot.state_index >= 0 &&
-                             static_cast<std::size_t>(slot.state_index) <
-                                 state.workspaces.list.size();
-          const WorkspaceState* ws =
-              valid ? &state.workspaces.list[static_cast<std::size_t>(slot.state_index)] : nullptr;
-          const bool occupied = ws != nullptr && ws->occupied;
-          Color color = occupied ? config_->text : config_->dim;
-          // Cross-fade the numeral under the sliding disc to the focused text
-          // colour, so the white label hands off smoothly at the midpoint.
-          if (layout.ws_focus_visible && layout.ws_focus_d > 0.0) {
-            double blend = 1.0 - std::fabs(slot.cx - layout.ws_focus_x) /
-                                     (layout.ws_focus_d * 0.62);
-            blend = std::clamp(blend, 0.0, 1.0);
-            blend = blend * blend * (3.0 - 2.0 * blend);
-            const Color& fg = config_->ws_focused_text;
-            color = Color{color.r + (fg.r - color.r) * blend,
-                          color.g + (fg.g - color.g) * blend,
-                          color.b + (fg.b - color.b) * blend,
-                          color.a + (fg.a - color.a) * blend};
-          }
-          text_.draw_center(cr, slot.cx, slot.cy, std::to_string(slot.id), color);
-        }
-        break;
+        text_.draw_center(cr, slot.cx, slot.cy, std::to_string(slot.id), color);
       }
-      case Item::ActiveWindow: {
-        if (!state.window.present) break;
-        double glyph_w = 0.0;
-        if (!config_->window_glyph.empty()) {
-          glyph_w = icon_text_.measure(config_->window_glyph);
-          icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, config_->window_glyph,
-                                 config_->window_icon);
-        }
-        double text_x = r.x + glyph_w + kIconGap;
-        const double max_x = static_cast<double>(r.x + r.w);
-        // App name first (dim), then the window title capped to a fixed count.
-        const std::string name = window_name_text(state.window);
-        if (!name.empty() && text_x < max_x) {
-          const double name_w = text_.measure(name);
-          text_.draw_left(cr, text_x, center_y, ellipsize(name, max_x - text_x), config_->dim);
-          text_x += name_w + kNameTitleGap;
-        }
-        if (text_x < max_x) {
-          const std::string title = window_title_text(*config_, state.window);
-          text_.draw_left(cr, text_x, center_y, ellipsize(title, max_x - text_x), config_->text);
-        }
-        break;
+      break;
+    }
+    case Item::ActiveWindow: {
+      if (!state.window.present) break;
+      double glyph_w = 0.0;
+      if (!config_->window_glyph.empty()) {
+        glyph_w = icon_text_.measure(config_->window_glyph);
+        icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, config_->window_glyph,
+                               config_->window_icon);
       }
-      case Item::Clock: {
-        const double center_x = r.x + r.w / 2.0;
-        text_.draw_center(cr, center_x, center_y, format_clock(state.clock), config_->text);
-        break;
+      double text_x = r.x + glyph_w + kIconGap;
+      const double max_x = static_cast<double>(r.x + r.w);
+      // App name first (dim), then the window title capped to a fixed count.
+      const std::string name = window_name_text(state.window);
+      if (!name.empty() && text_x < max_x) {
+        const double name_w = text_.measure(name);
+        text_.draw_left(cr, text_x, center_y, ellipsize(name, max_x - text_x), config_->dim);
+        text_x += name_w + kNameTitleGap;
       }
-      case Item::Recorder: {
-        if (!state.recorder.active || config_->recorder_glyph.empty()) break;
-        // Pulse between dark red and bright red.
-        const double p = std::clamp(state.recorder.pulse, 0.0, 1.0);
-        const Color& dim = config_->recorder_color_dim;
-        const Color& bright = config_->recorder_color;
-        const Color color{dim.r + (bright.r - dim.r) * p, dim.g + (bright.g - dim.g) * p,
-                          dim.b + (bright.b - dim.b) * p, 1.0};
-        icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, config_->recorder_glyph, color);
-        break;
+      if (text_x < max_x) {
+        const std::string title = window_title_text(*config_, state.window);
+        text_.draw_left(cr, text_x, center_y, ellipsize(title, max_x - text_x), config_->text);
       }
-      case Item::Cpu: {
-        if (!state.cpu.present) break;
-        const double glyph_px = std::max(1.0, std::round((r.w * 0.020 / 9.0) * scale_) / scale_);
-        const double glyph_w = 9.0 * glyph_px;
-        const double glyph_h = 9.0 * glyph_px;
-        glyphs::draw(cr, glyphs::cpu(), r.x, center_y - glyph_h / 2.0, glyph_px, config_->text);
-        char buffer[16];
-        std::snprintf(buffer, sizeof(buffer), "%d%%", static_cast<int>(state.cpu.total + 0.5));
-        text_.draw_left(cr, r.x + glyph_w + layout.bar_w * 0.010, center_y, buffer, config_->text);
-        break;
-      }
-      case Item::Gpu: {
-        if (!state.gpu.present) break;
-        const double glyph_px = std::max(1.0, std::round((r.w * 0.020 / 9.0) * scale_) / scale_);
-        const double glyph_w = 9.0 * glyph_px;
-        const double glyph_h = 9.0 * glyph_px;
-        glyphs::draw(cr, glyphs::cpu(), r.x, center_y - glyph_h / 2.0, glyph_px,
-                     config_->window_icon);
-        char buffer[16];
-        std::snprintf(buffer, sizeof(buffer), "%d%%",
-                      static_cast<int>(state.gpu.utilization + 0.5));
-        text_.draw_left(cr, r.x + glyph_w + layout.bar_w * 0.010, center_y, buffer, config_->text);
-        break;
-      }
-      default:
-        break;
+      break;
+    }
+    case Item::Clock: {
+      const double center_x = r.x + r.w / 2.0;
+      text_.draw_center(cr, center_x, center_y, format_clock(state.clock), config_->text);
+      break;
+    }
+    case Item::Recorder: {
+      if (!state.recorder.active || config_->recorder_glyph.empty()) break;
+      // Pulse between dark red and bright red.
+      const double p = std::clamp(state.recorder.pulse, 0.0, 1.0);
+      const Color& dim = config_->recorder_color_dim;
+      const Color& bright = config_->recorder_color;
+      const Color color{dim.r + (bright.r - dim.r) * p, dim.g + (bright.g - dim.g) * p,
+                        dim.b + (bright.b - dim.b) * p, 1.0};
+      icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, config_->recorder_glyph, color);
+      break;
+    }
+    case Item::Cpu: {
+      if (!state.cpu.present) break;
+      const double glyph_px = std::max(1.0, std::round((r.w * 0.020 / 9.0) * scale_) / scale_);
+      const double glyph_w = 9.0 * glyph_px;
+      const double glyph_h = 9.0 * glyph_px;
+      glyphs::draw(cr, glyphs::cpu(), r.x, center_y - glyph_h / 2.0, glyph_px, config_->text);
+      char buffer[16];
+      std::snprintf(buffer, sizeof(buffer), "%d%%", static_cast<int>(state.cpu.total + 0.5));
+      text_.draw_left(cr, r.x + glyph_w + layout.bar_w * 0.010, center_y, buffer, config_->text);
+      break;
+    }
+    case Item::Gpu: {
+      if (!state.gpu.present) break;
+      const double glyph_px = std::max(1.0, std::round((r.w * 0.020 / 9.0) * scale_) / scale_);
+      const double glyph_w = 9.0 * glyph_px;
+      const double glyph_h = 9.0 * glyph_px;
+      glyphs::draw(cr, glyphs::cpu(), r.x, center_y - glyph_h / 2.0, glyph_px,
+                   config_->window_icon);
+      char buffer[16];
+      std::snprintf(buffer, sizeof(buffer), "%d%%", static_cast<int>(state.gpu.utilization + 0.5));
+      text_.draw_left(cr, r.x + glyph_w + layout.bar_w * 0.010, center_y, buffer, config_->text);
+      break;
+    }
+    default:
+      break;
     }
     if (transformed) {
       cairo_pop_group_to_source(cr);
@@ -669,4 +660,4 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
   cairo_restore(cr);
 }
 
-}  // namespace pillbar
+} // namespace pillbar

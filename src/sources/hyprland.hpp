@@ -58,4 +58,4 @@ class HyprlandSource : public Source {
   bool have_window_ = false;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

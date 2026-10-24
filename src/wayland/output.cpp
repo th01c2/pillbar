@@ -26,12 +26,16 @@ void Output::setup(zxdg_output_manager_v1* manager) {
   zxdg_output_v1_add_listener(xdg_, &xdg_listener_, this);
 }
 
-int Output::fallback_width() const { return scale_ > 0 ? phys_w_ / scale_ : phys_w_; }
-int Output::fallback_height() const { return scale_ > 0 ? phys_h_ / scale_ : phys_h_; }
+int Output::fallback_width() const {
+  return scale_ > 0 ? phys_w_ / scale_ : phys_w_;
+}
+int Output::fallback_height() const {
+  return scale_ > 0 ? phys_h_ / scale_ : phys_h_;
+}
 
 void Output::ev_geometry(void* data, wl_output*, int32_t x, int32_t y, int32_t physical_width,
-                        int32_t physical_height, int32_t, const char*, const char*,
-                        int32_t transform) {
+                         int32_t physical_height, int32_t, const char*, const char*,
+                         int32_t transform) {
   auto* self = static_cast<Output*>(data);
   self->logical_x_ = x;
   self->logical_y_ = y;
@@ -104,8 +108,8 @@ void Output::ev_xdg_description(void* data, zxdg_output_v1*, const char* descrip
 }
 
 const wl_output_listener Output::output_listener_ = {
-    &Output::ev_geometry,     &Output::ev_mode, &Output::ev_done,
-    &Output::ev_scale,        &Output::ev_name, &Output::ev_description,
+    &Output::ev_geometry, &Output::ev_mode, &Output::ev_done,
+    &Output::ev_scale,    &Output::ev_name, &Output::ev_description,
 };
 
 const zxdg_output_v1_listener Output::xdg_listener_ = {
@@ -116,4 +120,4 @@ const zxdg_output_v1_listener Output::xdg_listener_ = {
     &Output::ev_xdg_description,
 };
 
-}  // namespace pillbar
+} // namespace pillbar

@@ -34,4 +34,4 @@ class JsonValue {
 
 JsonValue json_parse(const std::string& text, std::string* error);
 
-}  // namespace pillbar
+} // namespace pillbar

@@ -10,8 +10,8 @@
 
 #include "app/logging.hpp"
 #include "render/glyphs.hpp"
-#include "wayland/pointer.hpp"
 #include "wayland/output.hpp"
+#include "wayland/pointer.hpp"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
 namespace pillbar {
@@ -29,8 +29,7 @@ constexpr double kWorkspaceAnimSeconds = 0.18;
 int item_index(Item item) {
   const unsigned value = static_cast<unsigned>(item);
   if (value == 0u) return 0;
-  return std::min(static_cast<int>(std::countr_zero(value)),
-                  static_cast<int>(Bar::kItemSlots) - 1);
+  return std::min(static_cast<int>(std::countr_zero(value)), static_cast<int>(Bar::kItemSlots) - 1);
 }
 
 std::string format_clock_tooltip(const std::string& format) {
@@ -42,7 +41,7 @@ std::string format_clock_tooltip(const std::string& format) {
   return buffer;
 }
 
-}  // namespace
+} // namespace
 
 App::App() = default;
 App::~App() = default;
@@ -212,21 +211,19 @@ void App::create_bar(Output& output) {
   bar->pill_w = renderer_.desired_width(config_, state_, bar->output_w);
   bar->pill_target = bar->pill_w;
   const int top = static_cast<int>(std::lround(bar->output_h * config_.margin_top_frac));
-  LOG_DEBUG("creating bar on %s: output=%dx%d pill=%.0fx%d scale=%.2f",
-            output.name().c_str(), bar->output_w, bar->output_h, bar->pill_w, bar->bar_h,
-            bar->scale);
+  LOG_DEBUG("creating bar on %s: output=%dx%d pill=%.0fx%d scale=%.2f", output.name().c_str(),
+            bar->output_w, bar->output_h, bar->pill_w, bar->bar_h, bar->scale);
 
   // The layer surface spans the whole output width so the pill can animate its
   // width without re-committing layer geometry; only the pill area accepts
   // pointer input (set from the layout).
   Bar* raw = bar.get();
-  bar->surface = std::make_unique<LayerSurface>(display_, &output, kLayerTop,
-                                                config_.namespace_name, true);
+  bar->surface =
+      std::make_unique<LayerSurface>(display_, &output, kLayerTop, config_.namespace_name, true);
   // Anchor to both horizontal edges and let the compositor size the surface to
   // the full output width; this is also what makes the exclusive zone below
   // actually reserve the strip instead of being ignored.
-  bar->surface->set_anchors(ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
-                            ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |
+  bar->surface->set_anchors(ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP | ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |
                             ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT);
   bar->surface->set_margin(top, 0, 0, 0);
   bar->surface->set_size(0, static_cast<std::uint32_t>(bar->bar_h));
@@ -273,8 +270,8 @@ void App::create_bar(Output& output) {
     if (raw->configured && raw->dirty != Item::None) redraw_bar(*raw, raw->dirty);
   });
 
-  bar->tooltip_surface = std::make_unique<LayerSurface>(display_, &output, kLayerOverlay,
-                                                        "pillbar-tooltip", false);
+  bar->tooltip_surface =
+      std::make_unique<LayerSurface>(display_, &output, kLayerOverlay, "pillbar-tooltip", false);
   bar->tooltip_surface->set_input_none();
   bar->tooltip_surface->set_anchors(ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
                                     ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
@@ -293,8 +290,7 @@ void App::create_bar(Output& output) {
     if (raw->tooltip_visible) update_tooltip(*raw);
   };
   bar->tooltip_surface->commit();
-  bar->tooltip_canvas =
-      std::make_unique<Canvas>(display_.shm(), bar->tooltip_surface->surface());
+  bar->tooltip_canvas = std::make_unique<Canvas>(display_.shm(), bar->tooltip_surface->surface());
 
   loop_.add(bar->hover_delay.get(), EPOLLIN, [this, raw](std::uint32_t) {
     raw->hover_delay.consume();
@@ -388,7 +384,7 @@ Item App::hit_test(Bar& bar, double x, double y) {
           bar.layout.workspace_slots[static_cast<std::size_t>(best_index)].diameter / 2.0 + 3.0;
       if (best > radius) {
         bar.hover_ws = -1;
-        continue;  // between numerals: not a button
+        continue; // between numerals: not a button
       }
       bar.hover_ws = best_index;
     }
@@ -404,7 +400,7 @@ void App::on_pointer_enter(wl_surface* surface, double x, double y) {
 void App::on_pointer_motion(wl_surface* surface, double x, double y) {
   Bar* bar = bar_for_surface(surface);
   if (bar == nullptr) return;
-  const int previous_ws = bar->hover_ws;  // hit_test overwrites this
+  const int previous_ws = bar->hover_ws; // hit_test overwrites this
   const Item item = hit_test(*bar, x, y);
   // Clickable items show the hand cursor, everything else the arrow.
   if (Pointer* pointer = display_.pointer()) {
@@ -413,8 +409,7 @@ void App::on_pointer_motion(wl_surface* surface, double x, double y) {
   // Every workspace numeral is the same item, so also react when the specific
   // circle under the pointer changes — otherwise the previous workspace's
   // tooltip stays on screen until the pointer leaves the whole bar.
-  const bool workspace_changed =
-      item == Item::Workspaces && bar->hover_ws != previous_ws;
+  const bool workspace_changed = item == Item::Workspaces && bar->hover_ws != previous_ws;
   if (item == bar->hover && !workspace_changed) return;
 
   bar->hover = item;
@@ -494,8 +489,7 @@ void App::redraw_bar(Bar& bar, Item items) {
     bar.dirty |= items;
     return;
   }
-  bar.layout =
-      renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
+  bar.layout = renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
   update_item_appears(bar);
   update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);
@@ -551,9 +545,8 @@ void App::on_anim_tick(Bar& bar) {
   // sub-pixel tail, which made the text look like it was shivering for a few
   // hundred milliseconds after every resize.
   constexpr double kDurationSeconds = 0.40;
-  const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() -
-                                                       bar.anim_start)
-                             .count();
+  const double elapsed =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - bar.anim_start).count();
   double progress = elapsed / kDurationSeconds;
   if (progress >= 1.0) progress = 1.0;
   constexpr double kBack = 1.2;
@@ -612,8 +605,7 @@ void App::update_workspace_focus(Bar& bar) {
     bar.ws_anim_to_x = target_x;
     bar.ws_anim_to_d = target_d;
     const double elapsed =
-        std::chrono::duration<double>(std::chrono::steady_clock::now() - bar.ws_anim_start)
-            .count();
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - bar.ws_anim_start).count();
     double progress = elapsed / kWorkspaceAnimSeconds;
     if (progress >= 1.0) {
       progress = 1.0;
@@ -699,105 +691,104 @@ void App::on_appear_tick(Bar& bar) {
 std::vector<std::string> App::tooltip_lines(Item item, Bar& bar) const {
   std::vector<std::string> lines;
   switch (item) {
-    case Item::Battery: {
-      const BatteryState& b = state_.battery;
-      char buffer[160];
-      std::snprintf(buffer, sizeof(buffer), "Battery: %d%%", b.percent);
+  case Item::Battery: {
+    const BatteryState& b = state_.battery;
+    char buffer[160];
+    std::snprintf(buffer, sizeof(buffer), "Battery: %d%%", b.percent);
+    lines.push_back(buffer);
+    lines.push_back(std::string("State: ") +
+                    (b.charging ? "charging" : (b.full ? "full" : "discharging")));
+    if (b.power_now > 0) {
+      std::snprintf(buffer, sizeof(buffer), "Draw: %.1f W",
+                    static_cast<double>(b.power_now) / 1000000.0);
       lines.push_back(buffer);
-      lines.push_back(std::string("State: ") +
-                      (b.charging ? "charging" : (b.full ? "full" : "discharging")));
-      if (b.power_now > 0) {
-        std::snprintf(buffer, sizeof(buffer), "Draw: %.1f W",
-                      static_cast<double>(b.power_now) / 1000000.0);
-        lines.push_back(buffer);
-      }
-      if (b.charging && b.power_now > 0 && b.energy_full > b.energy_now) {
-        const double hours =
-            static_cast<double>(b.energy_full - b.energy_now) / static_cast<double>(b.power_now);
-        std::snprintf(buffer, sizeof(buffer), "To full: %dh%02dm", static_cast<int>(hours),
-                      static_cast<int>((hours - std::floor(hours)) * 60.0));
-        lines.push_back(buffer);
-      } else if (!b.charging && !b.full && b.power_now > 0) {
-        const double hours = static_cast<double>(b.energy_now) / static_cast<double>(b.power_now);
-        std::snprintf(buffer, sizeof(buffer), "To empty: %dh%02dm", static_cast<int>(hours),
-                      static_cast<int>((hours - std::floor(hours)) * 60.0));
-        lines.push_back(buffer);
-      }
-      if (b.health > 0) {
-        std::snprintf(buffer, sizeof(buffer), "Health: %d%%", b.health);
-        lines.push_back(buffer);
-      }
-      lines.push_back(std::string("AC: ") + (b.ac_online ? "online" : "offline"));
-      break;
     }
-    case Item::Volume: {
-      const VolumeState& v = state_.volume;
-      char buffer[160];
-      std::snprintf(buffer, sizeof(buffer), "Volume: %d%%%s", v.percent,
-                    v.muted ? " (muted)" : "");
+    if (b.charging && b.power_now > 0 && b.energy_full > b.energy_now) {
+      const double hours =
+          static_cast<double>(b.energy_full - b.energy_now) / static_cast<double>(b.power_now);
+      std::snprintf(buffer, sizeof(buffer), "To full: %dh%02dm", static_cast<int>(hours),
+                    static_cast<int>((hours - std::floor(hours)) * 60.0));
       lines.push_back(buffer);
-      if (!v.sink_desc.empty()) lines.push_back(v.sink_desc);
-      if (!v.sink_name.empty()) lines.push_back(v.sink_name);
-      break;
+    } else if (!b.charging && !b.full && b.power_now > 0) {
+      const double hours = static_cast<double>(b.energy_now) / static_cast<double>(b.power_now);
+      std::snprintf(buffer, sizeof(buffer), "To empty: %dh%02dm", static_cast<int>(hours),
+                    static_cast<int>((hours - std::floor(hours)) * 60.0));
+      lines.push_back(buffer);
     }
-    case Item::Wifi:
-      lines = wifi_ ? wifi_->detail() : std::vector<std::string>{"Wi-Fi unavailable"};
-      break;
-    case Item::Bluetooth:
-      lines = bluetooth_ ? bluetooth_->detail() : std::vector<std::string>{"Bluetooth unavailable"};
-      break;
-    case Item::Recorder:
-      lines = recorder_ ? recorder_->detail() : std::vector<std::string>{"Recorder unavailable"};
-      break;
-    case Item::Workspaces: {
-      const int state_index =
-          bar.hover_ws >= 0 && static_cast<std::size_t>(bar.hover_ws) <
-                                   bar.layout.workspace_slots.size()
-              ? bar.layout.workspace_slots[static_cast<std::size_t>(bar.hover_ws)].state_index
-              : -1;
-      if (state_index >= 0 &&
-          static_cast<std::size_t>(state_index) < state_.workspaces.list.size()) {
-        const WorkspaceState& ws = state_.workspaces.list[static_cast<std::size_t>(state_index)];
-        lines.push_back("Workspace " + ws.name + " (id " + std::to_string(ws.id) + ")");
-        lines.push_back("Windows: " + std::to_string(ws.windows));
-        for (const std::string& cls : ws.classes) lines.push_back("  " + cls);
-      } else {
-        lines.push_back("Workspaces");
+    if (b.health > 0) {
+      std::snprintf(buffer, sizeof(buffer), "Health: %d%%", b.health);
+      lines.push_back(buffer);
+    }
+    lines.push_back(std::string("AC: ") + (b.ac_online ? "online" : "offline"));
+    break;
+  }
+  case Item::Volume: {
+    const VolumeState& v = state_.volume;
+    char buffer[160];
+    std::snprintf(buffer, sizeof(buffer), "Volume: %d%%%s", v.percent, v.muted ? " (muted)" : "");
+    lines.push_back(buffer);
+    if (!v.sink_desc.empty()) lines.push_back(v.sink_desc);
+    if (!v.sink_name.empty()) lines.push_back(v.sink_name);
+    break;
+  }
+  case Item::Wifi:
+    lines = wifi_ ? wifi_->detail() : std::vector<std::string>{"Wi-Fi unavailable"};
+    break;
+  case Item::Bluetooth:
+    lines = bluetooth_ ? bluetooth_->detail() : std::vector<std::string>{"Bluetooth unavailable"};
+    break;
+  case Item::Recorder:
+    lines = recorder_ ? recorder_->detail() : std::vector<std::string>{"Recorder unavailable"};
+    break;
+  case Item::Workspaces: {
+    const int state_index =
+        bar.hover_ws >= 0 &&
+                static_cast<std::size_t>(bar.hover_ws) < bar.layout.workspace_slots.size()
+            ? bar.layout.workspace_slots[static_cast<std::size_t>(bar.hover_ws)].state_index
+            : -1;
+    if (state_index >= 0 && static_cast<std::size_t>(state_index) < state_.workspaces.list.size()) {
+      const WorkspaceState& ws = state_.workspaces.list[static_cast<std::size_t>(state_index)];
+      lines.push_back("Workspace " + ws.name + " (id " + std::to_string(ws.id) + ")");
+      lines.push_back("Windows: " + std::to_string(ws.windows));
+      for (const std::string& cls : ws.classes)
+        lines.push_back("  " + cls);
+    } else {
+      lines.push_back("Workspaces");
+    }
+    break;
+  }
+  case Item::ActiveWindow: {
+    const WindowState& w = state_.window;
+    lines.push_back(w.title.empty() ? "(untitled)" : w.title);
+    lines.push_back("Class: " + (w.cls.empty() ? std::string("unknown") : w.cls));
+    lines.push_back("Workspace: " + std::to_string(w.workspace));
+    lines.push_back("PID: " + std::to_string(w.pid));
+    break;
+  }
+  case Item::Clock: {
+    lines.push_back(format_clock_tooltip(config_.clock_tooltip_format));
+    if (config_.system_item_tooltip) {
+      if (cpu_) {
+        lines.push_back("");
+        const std::vector<std::string> cpu_lines = cpu_->detail();
+        lines.insert(lines.end(), cpu_lines.begin(), cpu_lines.end());
       }
-      break;
-    }
-    case Item::ActiveWindow: {
-      const WindowState& w = state_.window;
-      lines.push_back(w.title.empty() ? "(untitled)" : w.title);
-      lines.push_back("Class: " + (w.cls.empty() ? std::string("unknown") : w.cls));
-      lines.push_back("Workspace: " + std::to_string(w.workspace));
-      lines.push_back("PID: " + std::to_string(w.pid));
-      break;
-    }
-    case Item::Clock: {
-      lines.push_back(format_clock_tooltip(config_.clock_tooltip_format));
-      if (config_.system_item_tooltip) {
-        if (cpu_) {
-          lines.push_back("");
-          const std::vector<std::string> cpu_lines = cpu_->detail();
-          lines.insert(lines.end(), cpu_lines.begin(), cpu_lines.end());
-        }
-        if (gpu_) {
-          lines.push_back("");
-          const std::vector<std::string> gpu_lines = gpu_->detail();
-          lines.insert(lines.end(), gpu_lines.begin(), gpu_lines.end());
-        }
+      if (gpu_) {
+        lines.push_back("");
+        const std::vector<std::string> gpu_lines = gpu_->detail();
+        lines.insert(lines.end(), gpu_lines.begin(), gpu_lines.end());
       }
-      break;
     }
-    case Item::Cpu:
-      lines = cpu_ ? cpu_->detail() : std::vector<std::string>{"CPU"};
-      break;
-    case Item::Gpu:
-      lines = gpu_ ? gpu_->detail() : std::vector<std::string>{"GPU"};
-      break;
-    default:
-      break;
+    break;
+  }
+  case Item::Cpu:
+    lines = cpu_ ? cpu_->detail() : std::vector<std::string>{"CPU"};
+    break;
+  case Item::Gpu:
+    lines = gpu_ ? gpu_->detail() : std::vector<std::string>{"GPU"};
+    break;
+  default:
+    break;
   }
   return lines;
 }
@@ -810,8 +801,7 @@ void App::show_tooltip(Bar& bar) {
 
   const int logical_w = static_cast<int>(std::ceil(bar.tooltip_metrics.width));
   const Rect* rect = bar.layout.rect_for(bar.hover);
-  const double item_center =
-      rect != nullptr ? rect->x + rect->w / 2.0 : bar.layout.bar_w / 2.0;
+  const double item_center = rect != nullptr ? rect->x + rect->w / 2.0 : bar.layout.bar_w / 2.0;
   const int bar_screen_x = bar.layout.screen_x;
   int tx = static_cast<int>(std::lround(bar_screen_x + item_center - logical_w / 2.0));
   tx = std::clamp(tx, 0, std::max(0, bar.output_w - logical_w));
@@ -877,4 +867,4 @@ void App::hide_tooltip(Bar& bar) {
   }
 }
 
-}  // namespace pillbar
+} // namespace pillbar

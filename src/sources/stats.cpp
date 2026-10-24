@@ -55,10 +55,12 @@ bool CpuSource::read_proc_stat(std::vector<CoreTimes>* out) {
     stream >> label;
     unsigned long long values[10] = {0};
     int count = 0;
-    while (count < 10 && (stream >> values[count])) ++count;
+    while (count < 10 && (stream >> values[count]))
+      ++count;
     if (count < 4) continue;
     unsigned long long total = 0;
-    for (int i = 0; i < count; ++i) total += values[i];
+    for (int i = 0; i < count; ++i)
+      total += values[i];
     const unsigned long long idle = values[3] + (count > 4 ? values[4] : 0);
     out->push_back(CoreTimes{total, idle});
   }
@@ -105,8 +107,8 @@ void CpuSource::sample() {
     for (std::size_t i = 1; i < current.size(); ++i) {
       const unsigned long long dt = current[i].total - previous_[i].total;
       const unsigned long long di = current[i].idle - previous_[i].idle;
-      const double usage = dt > 0 ? 100.0 * static_cast<double>(dt - di) / static_cast<double>(dt)
-                                  : 0.0;
+      const double usage =
+          dt > 0 ? 100.0 * static_cast<double>(dt - di) / static_cast<double>(dt) : 0.0;
       next.cores.push_back(CpuCoreState{usage});
     }
   }
@@ -168,4 +170,4 @@ std::vector<std::string> CpuSource::detail() const {
   return lines;
 }
 
-}  // namespace pillbar
+} // namespace pillbar

@@ -6,9 +6,9 @@
 #include <functional>
 #include <string>
 
-#include "wayland/display.hpp"
 #include "fractional-scale-v1-client-protocol.h"
 #include "viewporter-client-protocol.h"
+#include "wayland/display.hpp"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
 struct zwlr_layer_surface_v1;
@@ -67,4 +67,4 @@ class LayerSurface {
   bool closed_ = false;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

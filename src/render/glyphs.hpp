@@ -22,5 +22,5 @@ const PixelGlyph& cpu();
 // pixels (nearest-neighbour, integer-aligned rects).
 void draw(cairo_t* cr, const PixelGlyph& glyph, double x, double y, double px, const Color& color);
 
-}  // namespace glyphs
-}  // namespace pillbar
+} // namespace glyphs
+} // namespace pillbar

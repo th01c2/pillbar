@@ -41,4 +41,4 @@ class TextRenderer {
   bool antialias_ = false;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

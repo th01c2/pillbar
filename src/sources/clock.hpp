@@ -28,5 +28,4 @@ class ClockSource : public Source {
   TimerFd timer_{CLOCK_REALTIME};
 };
 
-}  // namespace pillbar
-
+} // namespace pillbar

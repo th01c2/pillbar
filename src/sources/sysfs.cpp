@@ -23,7 +23,7 @@ std::string read_all(const std::string& path, bool* ok) {
   if (ok != nullptr) *ok = true;
   return buffer.str();
 }
-}  // namespace
+} // namespace
 
 bool read_string(const std::string& path, std::string* out) {
   bool ok = false;
@@ -72,6 +72,5 @@ std::vector<std::string> list_directory(const std::string& path) {
   return entries;
 }
 
-}  // namespace sysfs
-}  // namespace pillbar
-
+} // namespace sysfs
+} // namespace pillbar

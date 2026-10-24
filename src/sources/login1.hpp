@@ -24,5 +24,4 @@ class Login1Source : public Source {
   std::function<void()> on_resume_;
 };
 
-}  // namespace pillbar
-
+} // namespace pillbar

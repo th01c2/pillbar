@@ -104,4 +104,4 @@ class Canvas {
   std::function<void()> on_buffer_free_;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

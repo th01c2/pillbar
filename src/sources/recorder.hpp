@@ -25,7 +25,7 @@ class RecorderSource : public Source {
 
   const char* name() const override { return "recorder"; }
   bool start(EventLoop& loop) override;
-  void refresh() override {}  // nothing to poll
+  void refresh() override {} // nothing to poll
 
   std::vector<std::string> detail() const;
   // SIGTERM the recorder process; false when it could not be identified.
@@ -55,4 +55,4 @@ class RecorderSource : public Source {
   std::vector<int> pids_;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

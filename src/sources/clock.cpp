@@ -57,4 +57,4 @@ void ClockSource::on_fire() {
   arm_next_minute();
 }
 
-}  // namespace pillbar
+} // namespace pillbar

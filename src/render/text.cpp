@@ -14,7 +14,7 @@ std::size_t utf8_sequence_length(unsigned char lead) {
   if ((lead & 0xE0u) == 0xC0u) return 2;
   if ((lead & 0xF0u) == 0xE0u) return 3;
   if ((lead & 0xF8u) == 0xF0u) return 4;
-  return 0;  // invalid lead byte
+  return 0; // invalid lead byte
 }
 
 // Replaces malformed UTF-8 sequences with U+FFFD so Pango never gets invalid
@@ -80,8 +80,8 @@ PangoLayout* make_layout(cairo_t* cr, const std::string& family, double size_px,
   cairo_font_options_t* options = cairo_font_options_create();
   cairo_font_options_set_antialias(options,
                                    antialias ? CAIRO_ANTIALIAS_GRAY : CAIRO_ANTIALIAS_NONE);
-  cairo_font_options_set_hint_style(options, antialias ? CAIRO_HINT_STYLE_SLIGHT
-                                                       : CAIRO_HINT_STYLE_FULL);
+  cairo_font_options_set_hint_style(options,
+                                    antialias ? CAIRO_HINT_STYLE_SLIGHT : CAIRO_HINT_STYLE_FULL);
   cairo_font_options_set_hint_metrics(options, CAIRO_HINT_METRICS_ON);
   pango_cairo_context_set_font_options(ctx, options);
   cairo_font_options_destroy(options);
@@ -108,7 +108,7 @@ PangoLayout* make_layout(cairo_t* cr, const std::string& family, double size_px,
   return layout;
 }
 
-}  // namespace
+} // namespace
 
 void TextRenderer::configure(const std::vector<std::string>& families, double size_px,
                              double letter_spacing, bool antialias) {
@@ -143,15 +143,15 @@ void TextRenderer::draw_left(cairo_t* cr, double x, double center_y, const std::
                              const Color& color) const {
   if (text.empty()) return;
   PangoContext* ctx = nullptr;
-  PangoLayout* layout =
-      make_layout(cr, family_list_, size_px_, letter_spacing_, antialias_, &ctx);
+  PangoLayout* layout = make_layout(cr, family_list_, size_px_, letter_spacing_, antialias_, &ctx);
   const std::string safe = sanitize_utf8(text);
   pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};
   pango_layout_get_pixel_extents(layout, &ink, nullptr);
   cairo_set_source_rgba(cr, color.r, color.g, color.b, color.a);
   const double origin_x = x - ink.x;
-  const double origin_y = center_y - static_cast<double>(ink.y) - static_cast<double>(ink.height) / 2.0;
+  const double origin_y =
+      center_y - static_cast<double>(ink.y) - static_cast<double>(ink.height) / 2.0;
   cairo_move_to(cr, origin_x, origin_y);
   pango_cairo_update_layout(cr, layout);
   pango_cairo_show_layout(cr, layout);
@@ -163,15 +163,16 @@ void TextRenderer::draw_center(cairo_t* cr, double center_x, double center_y,
                                const std::string& text, const Color& color) const {
   if (text.empty()) return;
   PangoContext* ctx = nullptr;
-  PangoLayout* layout =
-      make_layout(cr, family_list_, size_px_, letter_spacing_, antialias_, &ctx);
+  PangoLayout* layout = make_layout(cr, family_list_, size_px_, letter_spacing_, antialias_, &ctx);
   const std::string safe = sanitize_utf8(text);
   pango_layout_set_text(layout, safe.c_str(), -1);
   PangoRectangle ink{};
   pango_layout_get_pixel_extents(layout, &ink, nullptr);
   cairo_set_source_rgba(cr, color.r, color.g, color.b, color.a);
-  const double origin_x = center_x - static_cast<double>(ink.width) / 2.0 - static_cast<double>(ink.x);
-  const double origin_y = center_y - static_cast<double>(ink.y) - static_cast<double>(ink.height) / 2.0;
+  const double origin_x =
+      center_x - static_cast<double>(ink.width) / 2.0 - static_cast<double>(ink.x);
+  const double origin_y =
+      center_y - static_cast<double>(ink.y) - static_cast<double>(ink.height) / 2.0;
   cairo_move_to(cr, origin_x, origin_y);
   pango_cairo_update_layout(cr, layout);
   pango_cairo_show_layout(cr, layout);
@@ -223,9 +224,8 @@ void TextRenderer::draw_center_fill(cairo_t* cr, double center_x, double center_
   g_object_unref(layout);
 }
 
-void TextRenderer::draw_left_fill(cairo_t* cr, double x, double center_y,
-                                  const std::string& text, const Color& color,
-                                  double level) const {
+void TextRenderer::draw_left_fill(cairo_t* cr, double x, double center_y, const std::string& text,
+                                  const Color& color, double level) const {
   if (text.empty() || level <= 0.0 || color.a <= 0.0) return;
   PangoLayout* layout =
       make_layout(cr, family_list_, size_px_, letter_spacing_, antialias_, nullptr);
@@ -265,4 +265,4 @@ void TextRenderer::draw_left_fill(cairo_t* cr, double x, double center_y,
   g_object_unref(layout);
 }
 
-}  // namespace pillbar
+} // namespace pillbar

@@ -6,8 +6,8 @@
 
 #include <fcntl.h>
 
-#include <cerrno>
 #include <algorithm>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -42,14 +42,16 @@ int connect_unix(const std::string& path, bool nonblocking) {
   return fd;
 }
 
-}  // namespace
+} // namespace
 
 HyprlandSource::HyprlandSource(AppState& state, NotifyFn notify, int min_workspaces,
                                int max_workspaces)
     : state_(state), notify_(std::move(notify)), min_workspaces_(min_workspaces),
       max_workspaces_(max_workspaces) {}
 
-HyprlandSource::~HyprlandSource() { close_event(); }
+HyprlandSource::~HyprlandSource() {
+  close_event();
+}
 
 bool HyprlandSource::start(EventLoop& loop) {
   loop_ = &loop;
@@ -74,7 +76,9 @@ bool HyprlandSource::start(EventLoop& loop) {
   return true;
 }
 
-void HyprlandSource::refresh() { requery(); }
+void HyprlandSource::refresh() {
+  requery();
+}
 
 bool HyprlandSource::connect_event() {
   close_event();
@@ -138,7 +142,7 @@ void HyprlandSource::on_event() {
     pos = newline + 1;
   }
   buffer_.erase(0, pos);
-  if (buffer_.size() > 1u << 20) buffer_.clear();  // guard against unbounded growth
+  if (buffer_.size() > 1u << 20) buffer_.clear(); // guard against unbounded growth
 }
 
 void HyprlandSource::handle_line(const std::string& line) {
@@ -175,9 +179,8 @@ void HyprlandSource::handle_line(const std::string& line) {
     }
   }
   static const char* kRelevant[] = {
-      "workspace",         "workspacev2",    "focusedmon",        "openwindow",
-      "closewindow",       "movewindow",     "createworkspace",   "destroyworkspace",
-      "monitoradded",      "monitorremoved"};
+      "workspace",  "workspacev2",     "focusedmon",       "openwindow",   "closewindow",
+      "movewindow", "createworkspace", "destroyworkspace", "monitoradded", "monitorremoved"};
   for (const char* name : kRelevant) {
     if (event == name) {
       requery();
@@ -219,7 +222,7 @@ namespace {
 bool dispatch_ok(const std::string& response) {
   return response.rfind("error", 0) != 0;
 }
-}  // namespace
+} // namespace
 
 void HyprlandSource::dispatch_workspace(int id) {
   const std::string name = std::to_string(id);
@@ -334,4 +337,4 @@ void HyprlandSource::update_window() {
   }
 }
 
-}  // namespace pillbar
+} // namespace pillbar

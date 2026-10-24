@@ -22,7 +22,7 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr int kChargeStepMs = 16;
 constexpr int kChargeDurationMs = 450;
 
-}  // namespace
+} // namespace
 
 PowerSource::PowerSource(AppState& state, NotifyFn notify)
     : state_(state), notify_(std::move(notify)) {}
@@ -71,7 +71,9 @@ bool PowerSource::start(EventLoop& loop) {
   return true;
 }
 
-void PowerSource::refresh() { rescan(); }
+void PowerSource::refresh() {
+  rescan();
+}
 
 void PowerSource::on_uevent() {
   // Drain all queued uevents; one rescan covers them all.
@@ -132,7 +134,7 @@ void PowerSource::rescan() {
       long voltage_now = 0;
       if (sysfs::read_long(dir + "/current_now", &current_now) &&
           sysfs::read_long(dir + "/voltage_now", &voltage_now)) {
-        battery.power_now = current_now * voltage_now / 1000000;  // uA * uV -> uW
+        battery.power_now = current_now * voltage_now / 1000000; // uA * uV -> uW
       }
     }
     if (capacity < 0 && battery.energy_full > 0) {
@@ -159,8 +161,7 @@ void PowerSource::rescan() {
   const bool first_reading = !state_.battery.present;
   const bool charge_changed = !first_reading && battery.charging != state_.battery.charging;
   battery.shimmer = battery.charging ? state_.battery.shimmer : 0.0;
-  battery.charge_mix =
-      first_reading ? (battery.charging ? 1.0 : 0.0) : state_.battery.charge_mix;
+  battery.charge_mix = first_reading ? (battery.charging ? 1.0 : 0.0) : state_.battery.charge_mix;
 
   if (!(battery == state_.battery)) {
     state_.battery = battery;
@@ -222,8 +223,7 @@ void PowerSource::on_charge_tick() {
   charge_timer_.consume();
   charge_ms_ += kChargeStepMs;
   const double target = state_.battery.charging ? 1.0 : 0.0;
-  const double progress =
-      std::clamp(static_cast<double>(charge_ms_) / kChargeDurationMs, 0.0, 1.0);
+  const double progress = std::clamp(static_cast<double>(charge_ms_) / kChargeDurationMs, 0.0, 1.0);
   const double eased = 1.0 - std::pow(1.0 - progress, 3.0);
   BatteryState next = state_.battery;
   next.charge_mix = charge_from_ + (target - charge_from_) * eased;
@@ -239,4 +239,4 @@ void PowerSource::on_charge_tick() {
   }
 }
 
-}  // namespace pillbar
+} // namespace pillbar

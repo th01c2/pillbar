@@ -89,4 +89,4 @@ class WaylandDisplay {
   bool protocol_error_ = false;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

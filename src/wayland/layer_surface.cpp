@@ -1,9 +1,9 @@
 #include "wayland/layer_surface.hpp"
 
 #include "app/logging.hpp"
-#include "wayland/output.hpp"
 #include "fractional-scale-v1-client-protocol.h"
 #include "viewporter-client-protocol.h"
+#include "wayland/output.hpp"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
 namespace pillbar {
@@ -16,8 +16,8 @@ LayerSurface::LayerSurface(WaylandDisplay& display, Output* output, std::uint32_
                                                  output != nullptr ? output->wl() : nullptr, layer,
                                                  ns.c_str());
   zwlr_layer_surface_v1_add_listener(layer_, &layer_listener_, this);
-  zwlr_layer_surface_v1_set_keyboard_interactivity(layer_,
-                                                   ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE);
+  zwlr_layer_surface_v1_set_keyboard_interactivity(
+      layer_, ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE);
   if (display.viewporter() != nullptr) {
     viewport_ = wp_viewporter_get_viewport(display.viewporter(), surface_);
   }
@@ -78,7 +78,9 @@ void LayerSurface::set_destination(int width, int height) {
   wp_viewport_set_destination(viewport_, width, height);
 }
 
-void LayerSurface::commit() { wl_surface_commit(surface_); }
+void LayerSurface::commit() {
+  wl_surface_commit(surface_);
+}
 
 void LayerSurface::ev_configure(void* data, zwlr_layer_surface_v1* ls, std::uint32_t serial,
                                 std::uint32_t width, std::uint32_t height) {
@@ -102,4 +104,4 @@ void LayerSurface::ev_preferred_scale(void* data, wp_fractional_scale_v1*, std::
   if (self->on_scale) self->on_scale(self->scale_);
 }
 
-}  // namespace pillbar
+} // namespace pillbar

@@ -53,8 +53,8 @@ void Pointer::set_cursor(bool hand, double scale) {
     if (cursor_theme_ != nullptr) wl_cursor_theme_destroy(cursor_theme_);
     cursor_theme_ = wl_cursor_theme_load(nullptr, want_size, shm_);
     cursor_size_ = want_size;
-    cursor_arrow_ = cursor_theme_ != nullptr ? wl_cursor_theme_get_cursor(cursor_theme_, "default")
-                                             : nullptr;
+    cursor_arrow_ =
+        cursor_theme_ != nullptr ? wl_cursor_theme_get_cursor(cursor_theme_, "default") : nullptr;
     cursor_hand_ =
         cursor_theme_ != nullptr ? wl_cursor_theme_get_cursor(cursor_theme_, "pointer") : nullptr;
   }
@@ -197,4 +197,4 @@ const wl_pointer_listener Pointer::pointer_listener_ = {
     &Pointer::ev_warp,
 };
 
-}  // namespace pillbar
+} // namespace pillbar

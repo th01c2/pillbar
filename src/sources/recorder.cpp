@@ -22,8 +22,8 @@ constexpr int kConfirmMs = 1200;
 
 // Processes we are willing to SIGTERM for the click-to-stop action.
 const char* const kRecorders[] = {
-    "wl-screenrec", "wf-recorder", "gpu-screen-recorder", "kooha",
-    "wl-recorder",  "simplescreenrecorder",
+    "wl-screenrec", "wf-recorder", "gpu-screen-recorder",
+    "kooha",        "wl-recorder", "simplescreenrecorder",
 };
 
 bool is_recorder_name(const std::string& name) {
@@ -36,7 +36,8 @@ bool is_recorder_name(const std::string& name) {
 std::string read_comm(int pid) {
   std::string text;
   if (!sysfs::read_string("/proc/" + std::to_string(pid) + "/comm", &text)) return {};
-  while (!text.empty() && (text.back() == '\n' || text.back() == '\r')) text.pop_back();
+  while (!text.empty() && (text.back() == '\n' || text.back() == '\r'))
+    text.pop_back();
   return text;
 }
 
@@ -59,7 +60,7 @@ std::vector<int> scan_recorder_pids(std::string* first_name) {
   return pids;
 }
 
-}  // namespace
+} // namespace
 
 RecorderSource::RecorderSource(AppState& state, NotifyFn notify, int pulse_ms)
     : state_(state), notify_(std::move(notify)), pulse_ms_(pulse_ms > 0 ? pulse_ms : 2000) {}
@@ -153,7 +154,7 @@ void RecorderSource::end_recording() {
   pids_.clear();
   timer_.disarm();
   LOG_DEBUG("recorder: stopped");
-  RecorderState next;  // inactive
+  RecorderState next; // inactive
   if (!(next == state_.recorder)) {
     state_.recorder = next;
     if (notify_) notify_(Item::Recorder);
@@ -189,4 +190,4 @@ std::vector<std::string> RecorderSource::detail() const {
   return lines;
 }
 
-}  // namespace pillbar
+} // namespace pillbar

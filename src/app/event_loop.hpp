@@ -59,9 +59,7 @@ class EventLoop {
 
   // Called after each non-empty batch of dispatched events. Used to flush the
   // Wayland connection after any requests generated while handling events.
-  void set_post_dispatch(std::function<void()> callback) {
-    post_dispatch_ = std::move(callback);
-  }
+  void set_post_dispatch(std::function<void()> callback) { post_dispatch_ = std::move(callback); }
 
   // Run one non-blocking pass; used by tests and by `--once` smoke checks.
   int poll_once(int timeout_ms);
@@ -107,4 +105,4 @@ class SignalFd {
   Fd fd_;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

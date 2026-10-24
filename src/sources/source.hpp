@@ -24,5 +24,4 @@ class Source {
 
 using NotifyFn = std::function<void(Item)>;
 
-}  // namespace pillbar
-
+} // namespace pillbar

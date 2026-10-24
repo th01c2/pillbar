@@ -43,24 +43,24 @@ void AudioSource::refresh() {
 void AudioSource::ctx_state_cb(pa_context* context, void* userdata) {
   auto* self = static_cast<AudioSource*>(userdata);
   switch (pa_context_get_state(context)) {
-    case PA_CONTEXT_READY: {
-      pa_context_set_subscribe_callback(context, &AudioSource::subscribe_cb, self);
-      pa_context_subscribe(context,
-                           static_cast<pa_subscription_mask_t>(PA_SUBSCRIPTION_MASK_SINK |
-                                                               PA_SUBSCRIPTION_MASK_SERVER),
-                           nullptr, nullptr);
-      pa_context_get_server_info(context, &AudioSource::server_info_cb, self);
-      break;
-    }
-    case PA_CONTEXT_FAILED:
-      LOG_WARN("pulse context %s", pa_strerror(pa_context_errno(context)));
-      self->state_.volume.available = false;
-      break;
-    case PA_CONTEXT_TERMINATED:
-      self->state_.volume.available = false;
-      break;
-    default:
-      break;
+  case PA_CONTEXT_READY: {
+    pa_context_set_subscribe_callback(context, &AudioSource::subscribe_cb, self);
+    pa_context_subscribe(context,
+                         static_cast<pa_subscription_mask_t>(PA_SUBSCRIPTION_MASK_SINK |
+                                                             PA_SUBSCRIPTION_MASK_SERVER),
+                         nullptr, nullptr);
+    pa_context_get_server_info(context, &AudioSource::server_info_cb, self);
+    break;
+  }
+  case PA_CONTEXT_FAILED:
+    LOG_WARN("pulse context %s", pa_strerror(pa_context_errno(context)));
+    self->state_.volume.available = false;
+    break;
+  case PA_CONTEXT_TERMINATED:
+    self->state_.volume.available = false;
+    break;
+  default:
+    break;
   }
 }
 
@@ -88,8 +88,8 @@ void AudioSource::apply_sink(const pa_sink_info* info) {
   next.sink_name = info->name != nullptr ? info->name : "";
   next.sink_desc = info->description != nullptr ? info->description : "";
   const pa_volume_t avg = pa_cvolume_avg(&info->volume);
-  next.percent = static_cast<int>(std::lround(static_cast<double>(avg) * 100.0 /
-                                              static_cast<double>(PA_VOLUME_NORM)));
+  next.percent = static_cast<int>(
+      std::lround(static_cast<double>(avg) * 100.0 / static_cast<double>(PA_VOLUME_NORM)));
   next.percent = std::clamp(next.percent, 0, 100);
   sink_index_ = static_cast<int>(info->index);
   muted_ = next.muted;
@@ -103,7 +103,8 @@ void AudioSource::apply_sink(const pa_sink_info* info) {
 void AudioSource::subscribe_cb(pa_context* context, pa_subscription_event_type_t type,
                                uint32_t index, void* userdata) {
   auto* self = static_cast<AudioSource*>(userdata);
-  const auto facility = static_cast<pa_subscription_event_type_t>(type & PA_SUBSCRIPTION_EVENT_FACILITY_MASK);
+  const auto facility =
+      static_cast<pa_subscription_event_type_t>(type & PA_SUBSCRIPTION_EVENT_FACILITY_MASK);
   if (facility == PA_SUBSCRIPTION_EVENT_SERVER) {
     pa_context_get_server_info(context, &AudioSource::server_info_cb, self);
   } else if (facility == PA_SUBSCRIPTION_EVENT_SINK) {
@@ -142,4 +143,4 @@ void AudioSource::toggle_mute() {
                                     &AudioSource::success_cb, this);
 }
 
-}  // namespace pillbar
+} // namespace pillbar

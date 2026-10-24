@@ -77,9 +77,9 @@ class Pointer {
   int cursor_base_px_ = 24;
   std::uint32_t enter_serial_ = 0;
   bool hand_active_ = false;
-  wl_surface* cursor_focus_ = nullptr;  // surface the cursor was last set for
+  wl_surface* cursor_focus_ = nullptr; // surface the cursor was last set for
   double x_ = 0.0;
   double y_ = 0.0;
 };
 
-}  // namespace pillbar
+} // namespace pillbar

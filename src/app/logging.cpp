@@ -12,14 +12,14 @@ std::atomic<bool> g_in_log{false};
 
 const char* level_name(LogLevel level) {
   switch (level) {
-    case LogLevel::Error:
-      return "ERROR";
-    case LogLevel::Warn:
-      return "WARN";
-    case LogLevel::Info:
-      return "INFO";
-    case LogLevel::Debug:
-      return "DEBUG";
+  case LogLevel::Error:
+    return "ERROR";
+  case LogLevel::Warn:
+    return "WARN";
+  case LogLevel::Info:
+    return "INFO";
+  case LogLevel::Debug:
+    return "DEBUG";
   }
   return "?";
 }
@@ -33,9 +33,11 @@ LogLevel parse_level(const char* raw) {
   return LogLevel::Warn;
 }
 
-}  // namespace
+} // namespace
 
-LogLevel log_level() { return static_cast<LogLevel>(g_level.load(std::memory_order_relaxed)); }
+LogLevel log_level() {
+  return static_cast<LogLevel>(g_level.load(std::memory_order_relaxed));
+}
 
 void log_set_level(LogLevel level) {
   g_level.store(static_cast<int>(level), std::memory_order_relaxed);
@@ -47,7 +49,7 @@ void log_emit(LogLevel level, const char* file, int line, const char* fmt, ...) 
     log_set_level(parse_level(std::getenv("PILLBAR_LOG")));
   }
   if (static_cast<int>(level) > g_level.load(std::memory_order_relaxed)) return;
-  if (g_in_log.exchange(true)) return;  // guard against reentrant logging
+  if (g_in_log.exchange(true)) return; // guard against reentrant logging
 
   const char* base = std::strrchr(file, '/');
   base = base != nullptr ? base + 1 : file;
@@ -63,5 +65,4 @@ void log_emit(LogLevel level, const char* file, int line, const char* fmt, ...) 
   g_in_log.store(false, std::memory_order_relaxed);
 }
 
-}  // namespace pillbar
-
+} // namespace pillbar
