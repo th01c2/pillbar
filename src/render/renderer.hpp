@@ -26,6 +26,7 @@ class Renderer {
 
   double text_width(const std::string& text) const { return text_.measure(text); }
   double icon_width(const std::string& icon) const { return icon_text_.measure(icon); }
+  double clock_width(const std::string& text) const { return clock_text_.measure(text); }
 
   // Natural pill width for the given state: the sum of each item's intrinsic
   // content width (icon + text + padding + gaps), clamped to the output.
@@ -54,6 +55,7 @@ class Renderer {
   const Config* config_ = nullptr;
   TextRenderer text_;
   TextRenderer icon_text_;
+  TextRenderer clock_text_;
   TextRenderer tooltip_text_;
   double scale_ = 1.0;
 };
