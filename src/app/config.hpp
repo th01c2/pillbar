@@ -42,7 +42,7 @@ struct Config {
   double shadow_blur_px = 6.0;
 
   // --- typography ---
-  std::vector<std::string> fonts{"Departure Mono", "Terminus", "Cozette", "monospace"};
+  std::vector<std::string> fonts{"JetBrainsMono Nerd Font", "Noto Sans Mono", "monospace"};
   // Anti-alias the text. The intended bitmap/pixel fonts want this off, but the
   // fallback families are vector fonts, where AA-off looks ragged at 12px.
   bool smooth_text = true;
