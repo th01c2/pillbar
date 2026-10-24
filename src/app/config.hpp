@@ -123,7 +123,7 @@ struct Config {
   Color vpn_color_down = rgb(0xff5555);
   std::string cluster_glyph = "\U000F0BAB";
   Color cluster_color = rgb(0x232323);
-  double cluster_gap_split = 20.0;
+  double cluster_gap_split = 10.0;
   double cluster_capsule_pad_px = 4.0;
   int cluster_blur_radius = 3;
 

@@ -535,12 +535,6 @@ void Renderer::draw_tooltip(cairo_t* cr, const std::vector<std::string>& lines, 
 void Renderer::draw_system_cluster(cairo_t* cr, const BarLayout& layout) {
   const Rect& group = layout.cluster_rect;
   if (group.w <= 0) return;
-  std::vector<const Rect*> rects;
-  for (Item item : {Item::Volume, Item::Wifi}) {
-    const Rect* rect = layout.rect_for(item);
-    if (rect != nullptr) rects.push_back(rect);
-  }
-  if (rects.empty()) return;
 
   const double pad = config_->cluster_capsule_pad_px;
   const int blur_radius = std::max(1, config_->cluster_blur_radius);
@@ -560,17 +554,8 @@ void Renderer::draw_system_cluster(cairo_t* cr, const BarLayout& layout) {
   cairo_set_operator(mask, CAIRO_OPERATOR_OVER);
   cairo_set_source_rgba(mask, 1.0, 1.0, 1.0, 1.0);
   const double capsule_h = std::max(1.0, layout.bar_h - pad * 2.0);
-  const double radius = capsule_h / 2.0;
-  const double t = std::clamp(layout.cluster_t, 0.0, 1.12);
-  const double merged = cluster_merged_width(*this, *config_);
-  for (const Rect* rect : rects) {
-    const double target_w = rect->w + pad * 2.0;
-    const double width = merged + (target_w - merged) * t;
-    const double center = rect->x + rect->w / 2.0;
-    rounded_rect(mask, center - width / 2.0 - group.x + margin, pad + margin, width, capsule_h,
-                 radius);
-    cairo_fill(mask);
-  }
+  rounded_rect(mask, margin, pad + margin, group.w, capsule_h, capsule_h / 2.0);
+  cairo_fill(mask);
   cairo_destroy(mask);
 
   cairo_surface_flush(cluster_mask_);
@@ -584,6 +569,7 @@ void Renderer::draw_system_cluster(cairo_t* cr, const BarLayout& layout) {
   cairo_mask_surface(cr, cluster_mask_, group.x - margin, -margin);
   cairo_restore(cr);
 
+  const double t = std::clamp(layout.cluster_t, 0.0, 1.12);
   const double system_alpha = std::clamp(1.0 - 2.0 * t, 0.0, 1.0);
   if (system_alpha > 0.0 && !config_->cluster_glyph.empty()) {
     Color color = config_->text;
