@@ -41,6 +41,40 @@ void set_color(cairo_t* cr, const Color& c, double alpha_mul = 1.0) {
   cairo_set_source_rgba(cr, c.r, c.g, c.b, c.a * alpha_mul);
 }
 
+double night_factor(const Config& config, const ClockState& clock) {
+  const double hour = clock.hour + clock.minute / 60.0;
+  const double start = static_cast<double>(config.night_start_hour);
+  const double end = static_cast<double>(config.night_end_hour);
+  const double fade = std::max(1, config.night_fade_minutes) / 60.0;
+  double factor = 0.0;
+  if (start > end) {
+    if (hour >= start || hour < end) {
+      factor = 1.0;
+    } else if (hour >= start - fade && hour < start) {
+      factor = (hour - (start - fade)) / fade;
+    } else if (hour >= end && hour < end + fade) {
+      factor = 1.0 - (hour - end) / fade;
+    }
+  } else {
+    if (hour >= start && hour < end) {
+      factor = 1.0;
+    } else if (hour >= start - fade && hour < start) {
+      factor = (hour - (start - fade)) / fade;
+    } else if (hour >= end && hour < end + fade) {
+      factor = 1.0 - (hour - end) / fade;
+    }
+  }
+  return std::clamp(factor, 0.0, 1.0);
+}
+
+Color bar_color_at(const Config& config, const ClockState& clock) {
+  const double t = night_factor(config, clock);
+  const Color& day = config.bar_color;
+  const Color& night = config.bar_color_night;
+  return Color{day.r + (night.r - day.r) * t, day.g + (night.g - day.g) * t,
+               day.b + (night.b - day.b) * t, day.a + (night.a - day.a) * t};
+}
+
 // Length in bytes of the UTF-8 character starting at `index` (at least 1).
 std::size_t utf8_char_width(const std::string& input, std::size_t index) {
   const unsigned char lead = static_cast<unsigned char>(input[index]);
@@ -247,6 +281,7 @@ Item Renderer::item_for(const std::string& name) {
 
 void Renderer::configure(const Config& config) {
   config_ = &config;
+  active_bar_color_ = config.bar_color;
   text_.configure(config.fonts, config.font_size_px, config.letter_spacing, config.smooth_text);
   icon_text_.configure(config.icon_fonts, std::max(1.0, config.height_px * config.icon_size_frac),
                        0.0,
@@ -396,7 +431,7 @@ void Renderer::draw_tooltip(cairo_t* cr, const std::vector<std::string>& lines, 
 
   cairo_save(cr);
   cairo_translate(cr, x_offset, 0.0);
-  set_color(cr, config_->bar_color, opacity);
+  set_color(cr, active_bar_color_, opacity);
   rounded_rect(cr, 0, 0, metrics.width, metrics.height, config_->tooltip_radius_px);
   cairo_fill(cr);
 
@@ -435,7 +470,8 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       cairo_fill(cr);
     }
   }
-  set_color(cr, config_->bar_color);
+  active_bar_color_ = bar_color_at(*config_, state.clock);
+  set_color(cr, active_bar_color_);
   if (config_->notch) {
     notch_rect(cr, 0, 0, layout.bar_w, layout.bar_h, config_->notch_radius_px);
   } else {

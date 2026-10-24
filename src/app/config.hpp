@@ -37,6 +37,10 @@ struct Config {
   std::string monitors = "all"; // all | primary
 
   Color bar_color = rgb(0x181818); // notch fill
+  Color bar_color_night = rgb(0x000000);
+  int night_start_hour = 19;
+  int night_end_hour = 7;
+  int night_fade_minutes = 30;
   bool shadow = false;
   Color shadow_color = rgb(0x000000, 0.35);
   double shadow_offset_px = 2.0;

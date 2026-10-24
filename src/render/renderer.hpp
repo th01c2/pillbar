@@ -57,6 +57,7 @@ class Renderer {
   TextRenderer icon_text_;
   TextRenderer clock_text_;
   TextRenderer tooltip_text_;
+  Color active_bar_color_{};
   double scale_ = 1.0;
 };
 
