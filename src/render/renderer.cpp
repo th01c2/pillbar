@@ -454,7 +454,12 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
         double glyph_w = 0.0;
         if (!glyph.empty()) {
           glyph_w = icon_text_.measure(glyph);
-          icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, color);
+          const double glyph_cx = r.x + glyph_w / 2.0;
+          icon_text_.draw_center(cr, glyph_cx, center_y, glyph, color);
+          if (state.battery.charging) {
+            icon_text_.draw_center_fill(cr, glyph_cx, center_y, glyph,
+                                        config_->battery_charge_fill, state.battery.shimmer);
+          }
         }
         const double text_x = r.x + glyph_w + kIconGap;
         text_.draw_left(cr, text_x, center_y, format_percent(state.battery.percent), color);

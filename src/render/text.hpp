@@ -28,6 +28,8 @@ class TextRenderer {
   // Draws `text` horizontally centered on center_x.
   void draw_center(cairo_t* cr, double center_x, double center_y, const std::string& text,
                    const Color& color) const;
+  void draw_center_fill(cairo_t* cr, double center_x, double center_y, const std::string& text,
+                        const Color& color, double level) const;
 
  private:
   mutable std::vector<std::string> families_;

@@ -26,6 +26,8 @@ class PowerSource : public Source {
   void on_uevent();
   void rescan();
   void arm_fallback();
+  void arm_shimmer();
+  void on_shimmer();
 
   AppState& state_;
   NotifyFn notify_;
@@ -34,6 +36,8 @@ class PowerSource : public Source {
   udev_monitor* monitor_ = nullptr;
   int monitor_fd_ = -1;
   TimerFd fallback_;
+  TimerFd shimmer_timer_;
+  int shimmer_ms_ = 0;
 };
 
 }  // namespace pillbar

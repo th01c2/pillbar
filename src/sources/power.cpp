@@ -13,6 +13,13 @@
 
 namespace pillbar {
 
+namespace {
+
+constexpr int kShimmerStepMs = 80;
+constexpr int kShimmerPeriodMs = 2500;
+
+}  // namespace
+
 PowerSource::PowerSource(AppState& state, NotifyFn notify)
     : state_(state), notify_(std::move(notify)) {}
 
@@ -47,6 +54,10 @@ bool PowerSource::start(EventLoop& loop) {
       rescan();
     });
     fallback_.disarm();
+  }
+  if (shimmer_timer_.valid()) {
+    loop.add(shimmer_timer_.get(), EPOLLIN, [this](std::uint32_t) { on_shimmer(); });
+    shimmer_timer_.disarm();
   }
   rescan();
   return true;
@@ -137,12 +148,14 @@ void PowerSource::rescan() {
   if (found_battery && (ac_online || battery_status == "Charging")) {
     battery.charging = true;
   }
+  battery.shimmer = battery.charging ? state_.battery.shimmer : 0.0;
 
   if (!(battery == state_.battery)) {
     state_.battery = battery;
     if (notify_) notify_(Item::Battery);
   }
   arm_fallback();
+  arm_shimmer();
 }
 
 void PowerSource::arm_fallback() {
@@ -158,6 +171,33 @@ void PowerSource::arm_fallback() {
   }
   const int interval_ms = battery.percent < 20 ? 30000 : 60000;
   fallback_.arm_relative_ms(interval_ms, true);
+}
+
+void PowerSource::arm_shimmer() {
+  if (!shimmer_timer_.valid()) return;
+  if (!state_.battery.present || !state_.battery.charging) {
+    shimmer_timer_.disarm();
+    shimmer_ms_ = 0;
+    return;
+  }
+  shimmer_timer_.arm_relative_ms(kShimmerStepMs, true);
+}
+
+void PowerSource::on_shimmer() {
+  shimmer_timer_.consume();
+  if (!state_.battery.present || !state_.battery.charging) {
+    shimmer_timer_.disarm();
+    shimmer_ms_ = 0;
+    return;
+  }
+  shimmer_ms_ = (shimmer_ms_ + kShimmerStepMs) % kShimmerPeriodMs;
+  BatteryState next = state_.battery;
+  next.shimmer = static_cast<double>(shimmer_ms_) / kShimmerPeriodMs;
+  if (!(next == state_.battery)) {
+    state_.battery = next;
+    if (notify_) notify_(Item::Battery);
+  }
+  shimmer_timer_.arm_relative_ms(kShimmerStepMs, true);
 }
 
 }  // namespace pillbar

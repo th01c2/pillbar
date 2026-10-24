@@ -42,6 +42,7 @@ struct BatteryState {
   long energy_full = 0;  // uWh
   long power_now = 0;    // uW
   int health = 0;        // percent
+  double shimmer = 0.0;
   bool operator==(const BatteryState&) const = default;
 };
 
