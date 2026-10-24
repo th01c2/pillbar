@@ -130,6 +130,8 @@ struct VpnState {
   bool up = false;
   std::string unit;
   std::string state;  // e.g. "active (exited)"
+  double mix = 1.0;
+  double pulse = 0.0;
   bool operator==(const VpnState&) const = default;
 };
 

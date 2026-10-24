@@ -25,6 +25,7 @@ class VpnSource : public Source {
   int on_properties(sd_bus_message* message);
   int on_unit_new(sd_bus_message* message);
   int on_unit_removed(sd_bus_message* message);
+  void on_anim();
   void resolve_unit();
   void query();
 
@@ -34,6 +35,10 @@ class VpnSource : public Source {
   std::string unit_;
   std::string unit_path_;
   bool exists_ = false;  // the unit file exists (independent of loaded state)
+  TimerFd anim_timer_;
+  int anim_ms_ = 0;
+  double from_mix_ = 1.0;
+  bool have_state_ = false;
 };
 
 }  // namespace pillbar

@@ -1,5 +1,7 @@
 #include "sources/vpn.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <utility>
 
 #include "app/logging.hpp"
@@ -18,11 +20,12 @@ VpnSource::VpnSource(AppState& state, NotifyFn notify, DbusBus& bus, std::string
     : state_(state), notify_(std::move(notify)), bus_(bus), unit_(std::move(unit)) {}
 
 bool VpnSource::start(EventLoop& loop) {
-  (void)loop;
   if (!bus_.valid()) {
     LOG_WARN("vpn: system bus unavailable; item hidden");
     return false;
   }
+  loop.add(anim_timer_.get(), EPOLLIN, [this](std::uint32_t) { on_anim(); });
+  anim_timer_.disarm();
   bus_.add_match(
       "type='signal',sender='org.freedesktop.systemd1',"
       "interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',"
@@ -84,6 +87,20 @@ void VpnSource::query() {
       next.state = sub.empty() ? active : active + " (" + sub + ")";
     }
   }
+  if (!have_state_ || !state_.vpn.present || !next.present) {
+    next.mix = next.up ? 1.0 : 0.0;
+    next.pulse = 0.0;
+  } else if (state_.vpn.up != next.up) {
+    from_mix_ = state_.vpn.mix;
+    next.mix = state_.vpn.mix;
+    next.pulse = 0.0;
+    anim_ms_ = 0;
+    if (anim_timer_.valid()) anim_timer_.arm_relative_ms(16, false);
+  } else {
+    next.mix = state_.vpn.mix;
+    next.pulse = state_.vpn.pulse;
+  }
+  have_state_ = true;
   if (!(next == state_.vpn)) {
     state_.vpn = next;
     if (notify_) notify_(Item::Vpn);
@@ -115,6 +132,32 @@ int VpnSource::on_unit_removed(sd_bus_message* message) {
     query();  // unit file still exists -> present, but down -> red
   }
   return 0;
+}
+
+void VpnSource::on_anim() {
+  anim_timer_.consume();
+  anim_ms_ += 16;
+  const double target = state_.vpn.up ? 1.0 : 0.0;
+  const double progress = std::clamp(static_cast<double>(anim_ms_) / 200.0, 0.0, 1.0);
+  const double eased = 1.0 - std::pow(1.0 - progress, 3.0);
+  VpnState next = state_.vpn;
+  next.mix = from_mix_ + (target - from_mix_) * eased;
+  next.pulse = std::sin(3.14159265358979323846 *
+                        std::clamp(static_cast<double>(anim_ms_) / 300.0, 0.0, 1.0));
+  if (progress >= 1.0) next.mix = target;
+  if (anim_ms_ >= 300) {
+    next.mix = target;
+    next.pulse = 0.0;
+  }
+  if (!(next == state_.vpn)) {
+    state_.vpn = next;
+    if (notify_) notify_(Item::Vpn);
+  }
+  if (anim_ms_ < 300) {
+    anim_timer_.arm_relative_ms(16, true);
+  } else {
+    anim_timer_.disarm();
+  }
 }
 
 }  // namespace pillbar

@@ -599,9 +599,21 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       }
       case Item::Vpn: {
         if (!state.vpn.present || config_->vpn_glyph.empty()) break;
-        const Color color = state.vpn.up ? config_->vpn_color : config_->vpn_color_down;
-        icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, config_->vpn_glyph,
-                               color);
+        const double mix = std::clamp(state.vpn.mix, 0.0, 1.0);
+        const Color& down = config_->vpn_color_down;
+        const Color& up = config_->vpn_color;
+        Color color{down.r + (up.r - down.r) * mix, down.g + (up.g - down.g) * mix,
+                    down.b + (up.b - down.b) * mix, down.a + (up.a - down.a) * mix};
+        const double pulse = std::clamp(state.vpn.pulse, 0.0, 1.0);
+        const double glow = pulse * 0.5;
+        color.r += (1.0 - color.r) * glow;
+        color.g += (1.0 - color.g) * glow;
+        color.b += (1.0 - color.b) * glow;
+        cairo_save(cr);
+        cairo_translate(cr, r.x + r.w / 2.0, center_y);
+        cairo_scale(cr, 1.0 + pulse * 0.12, 1.0 + pulse * 0.12);
+        icon_text_.draw_center(cr, 0.0, 0.0, config_->vpn_glyph, color);
+        cairo_restore(cr);
         break;
       }
       case Item::Cpu: {
