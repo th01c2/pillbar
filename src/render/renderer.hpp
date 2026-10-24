@@ -22,10 +22,13 @@ struct TooltipMetrics {
 // Cairo context by the surface scale before calling these methods.
 class Renderer {
  public:
+  static Item item_for(const std::string& name);
+
   void configure(const Config& config);
 
   double text_width(const std::string& text) const { return text_.measure(text); }
   double icon_width(const std::string& icon) const { return icon_text_.measure(icon); }
+  double item_natural_width(const Config& config, const AppState& state, Item item) const;
 
   // Natural pill width for the given state: the sum of each item's intrinsic
   // content width (icon + text + padding + gaps), clamped to the output.

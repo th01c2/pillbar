@@ -127,25 +127,10 @@ std::string wifi_band_label(const WifiState& wifi) {
 }
 
 // Layout metrics (logical pixels).
-constexpr double kPillPad = 14.0;     // left/right padding inside the pill
 constexpr double kItemGap = 12.0;     // space between items
 constexpr double kIconGap = 6.0;      // icon -> label inside an item
 constexpr double kNameTitleGap = 8.0; // app name -> window title
 constexpr int kAppNameMaxChars = 20;
-
-Item item_of(const std::string& name) {
-  if (name == "battery") return Item::Battery;
-  if (name == "volume") return Item::Volume;
-  if (name == "wifi") return Item::Wifi;
-  if (name == "bluetooth") return Item::Bluetooth;
-  if (name == "workspaces") return Item::Workspaces;
-  if (name == "window") return Item::ActiveWindow;
-  if (name == "recorder") return Item::Recorder;
-  if (name == "clock") return Item::Clock;
-  if (name == "cpu") return Item::Cpu;
-  if (name == "gpu") return Item::Gpu;
-  return Item::None;
-}
 
 // One rendered workspace numeral: its id plus the index into
 // AppState::workspaces.list (-1 when nothing is known about it).
@@ -246,6 +231,20 @@ double item_width(const Renderer& renderer, const Config& config, const AppState
 
 } // namespace
 
+Item Renderer::item_for(const std::string& name) {
+  if (name == "battery") return Item::Battery;
+  if (name == "volume") return Item::Volume;
+  if (name == "wifi") return Item::Wifi;
+  if (name == "bluetooth") return Item::Bluetooth;
+  if (name == "workspaces") return Item::Workspaces;
+  if (name == "window") return Item::ActiveWindow;
+  if (name == "recorder") return Item::Recorder;
+  if (name == "clock") return Item::Clock;
+  if (name == "cpu") return Item::Cpu;
+  if (name == "gpu") return Item::Gpu;
+  return Item::None;
+}
+
 void Renderer::configure(const Config& config) {
   config_ = &config;
   text_.configure(config.fonts, config.font_size_px, config.letter_spacing, config.smooth_text);
@@ -256,13 +255,18 @@ void Renderer::configure(const Config& config) {
                           config.smooth_text);
 }
 
+double Renderer::item_natural_width(const Config& config, const AppState& state,
+                                    Item item) const {
+  return item_width(*this, config, state, item);
+}
+
 double Renderer::desired_width(const Config& config, const AppState& state, int output_w) const {
-  double total = kPillPad * 2.0;
+  double total = config.pill_pad_px * 2.0;
   int shown = 0;
   for (const std::string& name : config.order) {
     const auto it = config.slots.find(name);
     if (it == config.slots.end() || !it->second.enabled) continue;
-    const double width = item_width(*this, config, state, item_of(name));
+    const double width = item_width(*this, config, state, item_for(name));
     if (width < 0.0) continue;
     if (shown > 0) total += kItemGap;
     total += width;
@@ -290,7 +294,7 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
   for (const std::string& name : config.order) {
     const auto it = config.slots.find(name);
     if (it == config.slots.end() || !it->second.enabled) continue;
-    const Item item = item_of(name);
+    const Item item = item_for(name);
     const double width = item_width(*this, config, state, item);
     if (width < 0.0) continue;
     if (!entries.empty()) content += kItemGap;
@@ -300,7 +304,7 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
 
   // If the pill is not wide enough yet (e.g. mid-animation), take the deficit
   // out of the window title, which is the only elastic item.
-  const double available = static_cast<double>(layout.bar_w) - kPillPad * 2.0;
+  const double available = static_cast<double>(layout.bar_w) - config.pill_pad_px * 2.0;
   if (content > available) {
     double deficit = content - available;
     for (Entry& entry : entries) {
@@ -319,7 +323,7 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
   // rounding the screen position once keeps the text perfectly still and lets
   // the notch edges animate around it.
   double cursor_screen = std::lround((static_cast<double>(output_w) - content) / 2.0);
-  const double min_screen = static_cast<double>(layout.screen_x) + kPillPad;
+  const double min_screen = static_cast<double>(layout.screen_x) + config.pill_pad_px;
   if (cursor_screen < min_screen) cursor_screen = min_screen;
   const double center_y = static_cast<double>(layout.bar_h) / 2.0;
   for (const Entry& entry : entries) {

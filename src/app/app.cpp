@@ -476,6 +476,30 @@ void App::redraw_bar(Bar& bar, Item items) {
     return;
   }
   bar.layout = renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
+  if (bar.anchor == Bar::Anchor::Left) {
+    bar.layout.screen_x = bar.anchor_edge;
+  } else if (bar.anchor == Bar::Anchor::Right) {
+    bar.layout.screen_x = bar.anchor_edge - bar.layout.bar_w;
+  }
+  if (bar.anchor != Bar::Anchor::Center && !bar.layout.items.empty()) {
+    double content_left = 1e9;
+    double content_right = -1e9;
+    for (const ItemBox& box : bar.layout.items) {
+      content_left = std::min(content_left, static_cast<double>(box.rect.x));
+      content_right = std::max(content_right, static_cast<double>(box.rect.x + box.rect.w));
+    }
+    int delta = 0;
+    if (bar.anchor == Bar::Anchor::Left) {
+      delta = static_cast<int>(std::lround(config_.pill_pad_px - content_left));
+    } else {
+      delta = static_cast<int>(std::lround(static_cast<double>(bar.layout.bar_w) -
+                                           config_.pill_pad_px - content_right));
+    }
+    if (delta != 0) {
+      for (ItemBox& box : bar.layout.items) box.rect.x += delta;
+      for (WorkspaceSlot& slot : bar.layout.workspace_slots) slot.cx += delta;
+    }
+  }
   update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);
   cairo_t* cr = bar.canvas->begin();
@@ -513,10 +537,43 @@ void App::update_target_width(Bar& bar) {
     bar.pill_w = target;
     bar.animating = false;
     bar.anim_timer.disarm();
+    bar.anchor = Bar::Anchor::Center;
     redraw_bar(bar, Item::All);
     return;
   }
   if (!bar.anim_timer.valid()) return;
+  if (!bar.animating) {
+    bar.anchor = Bar::Anchor::Center;
+    if (bar.layout.bar_w > 0) {
+      int best_index = -1;
+      double best_delta = 0.0;
+      int index = 0;
+      for (const std::string& name : config_.order) {
+        const auto it = config_.slots.find(name);
+        if (it == config_.slots.end() || !it->second.enabled) continue;
+        const Item item = Renderer::item_for(name);
+        if (item == Item::None) continue;
+        const double now = std::max(0.0, renderer_.item_natural_width(config_, state_, item));
+        const Rect* old = bar.layout.rect_for(item);
+        const double before = old != nullptr ? static_cast<double>(old->w) : 0.0;
+        const double delta = std::fabs(now - before);
+        if (delta > best_delta) {
+          best_delta = delta;
+          best_index = index;
+        }
+        ++index;
+      }
+      if (best_index >= 0 && best_delta > 0.5 && index > 0) {
+        if (best_index * 2 >= index) {
+          bar.anchor = Bar::Anchor::Left;
+          bar.anchor_edge = bar.layout.screen_x;
+        } else {
+          bar.anchor = Bar::Anchor::Right;
+          bar.anchor_edge = bar.layout.screen_x + bar.layout.bar_w;
+        }
+      }
+    }
+  }
   bar.anim_from = bar.pill_w;
   bar.anim_start = std::chrono::steady_clock::now();
   if (!bar.animating) {
