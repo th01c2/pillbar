@@ -566,23 +566,8 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       }
 
       for (const WorkspaceSlot& slot : layout.workspace_slots) {
-        const bool valid = slot.state_index >= 0 && static_cast<std::size_t>(slot.state_index) <
-                                                        state.workspaces.list.size();
-        const WorkspaceState* ws =
-            valid ? &state.workspaces.list[static_cast<std::size_t>(slot.state_index)] : nullptr;
-        const bool occupied = ws != nullptr && ws->occupied;
-        Color color = occupied ? config_->text : config_->dim;
-        // Cross-fade the numeral under the sliding disc to the focused text
-        // colour, so the white label hands off smoothly at the midpoint.
-        if (layout.ws_focus_visible && layout.ws_focus_d > 0.0) {
-          double blend = 1.0 - std::fabs(slot.cx - layout.ws_focus_x) / (layout.ws_focus_d * 0.62);
-          blend = std::clamp(blend, 0.0, 1.0);
-          blend = blend * blend * (3.0 - 2.0 * blend);
-          const Color& fg = config_->ws_focused_text;
-          color = Color{color.r + (fg.r - color.r) * blend, color.g + (fg.g - color.g) * blend,
-                        color.b + (fg.b - color.b) * blend, color.a + (fg.a - color.a) * blend};
-        }
-        text_.draw_center(cr, slot.cx, slot.cy, std::to_string(slot.id), color);
+        text_.draw_center(cr, slot.cx, slot.cy, std::to_string(slot.id),
+                          config_->ws_focused_text);
       }
       break;
     }
