@@ -480,7 +480,7 @@ void App::redraw_bar(Bar& bar, Item items) {
   const int gap = static_cast<int>(std::lround(config_.item_gap_px));
   int left = pad;
   for (ItemBox& box : bar.layout.items) {
-    if (box.item == Item::Battery || box.item == Item::Volume) {
+    if (box.item == Item::Battery || box.item == Item::Volume || box.item == Item::Wifi) {
       box.rect.x = left;
       left += box.rect.w + gap;
     } else if (box.item == Item::Clock) {
@@ -490,7 +490,8 @@ void App::redraw_bar(Bar& bar, Item items) {
   if (bar.anim_progress < 1.0) {
     int ws_delta = 0;
     for (ItemBox& box : bar.layout.items) {
-      if (box.item == Item::Battery || box.item == Item::Volume || box.item == Item::Clock) {
+      if (box.item == Item::Battery || box.item == Item::Volume || box.item == Item::Wifi ||
+          box.item == Item::Clock) {
         continue;
       }
       const auto it = bar.anim_from_x.find(box.item);
