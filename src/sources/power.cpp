@@ -19,6 +19,8 @@ namespace {
 constexpr int kShimmerStepMs = 50;
 constexpr int kShimmerPeriodMs = 4500;
 constexpr double kPi = 3.14159265358979323846;
+constexpr int kChargeStepMs = 16;
+constexpr int kChargeDurationMs = 350;
 
 }  // namespace
 
@@ -60,6 +62,10 @@ bool PowerSource::start(EventLoop& loop) {
   if (shimmer_timer_.valid()) {
     loop.add(shimmer_timer_.get(), EPOLLIN, [this](std::uint32_t) { on_shimmer(); });
     shimmer_timer_.disarm();
+  }
+  if (charge_timer_.valid()) {
+    loop.add(charge_timer_.get(), EPOLLIN, [this](std::uint32_t) { on_charge_tick(); });
+    charge_timer_.disarm();
   }
   rescan();
   return true;
@@ -150,11 +156,20 @@ void PowerSource::rescan() {
   if (found_battery && (ac_online || battery_status == "Charging")) {
     battery.charging = true;
   }
+  const bool first_reading = !state_.battery.present;
+  const bool charge_changed = !first_reading && battery.charging != state_.battery.charging;
   battery.shimmer = battery.charging ? state_.battery.shimmer : 0.0;
+  battery.charge_mix =
+      first_reading ? (battery.charging ? 1.0 : 0.0) : state_.battery.charge_mix;
 
   if (!(battery == state_.battery)) {
     state_.battery = battery;
     if (notify_) notify_(Item::Battery);
+  }
+  if (charge_changed) {
+    charge_from_ = state_.battery.charge_mix;
+    charge_ms_ = 0;
+    if (charge_timer_.valid()) charge_timer_.arm_relative_ms(kChargeStepMs, false);
   }
   arm_fallback();
   arm_shimmer();
@@ -201,6 +216,27 @@ void PowerSource::on_shimmer() {
     if (notify_) notify_(Item::Battery);
   }
   shimmer_timer_.arm_relative_ms(kShimmerStepMs, true);
+}
+
+void PowerSource::on_charge_tick() {
+  charge_timer_.consume();
+  charge_ms_ += kChargeStepMs;
+  const double target = state_.battery.charging ? 1.0 : 0.0;
+  const double progress =
+      std::clamp(static_cast<double>(charge_ms_) / kChargeDurationMs, 0.0, 1.0);
+  const double eased = 1.0 - std::pow(1.0 - progress, 3.0);
+  BatteryState next = state_.battery;
+  next.charge_mix = charge_from_ + (target - charge_from_) * eased;
+  if (progress >= 1.0) next.charge_mix = target;
+  if (!(next == state_.battery)) {
+    state_.battery = next;
+    if (notify_) notify_(Item::Battery);
+  }
+  if (progress < 1.0) {
+    charge_timer_.arm_relative_ms(kChargeStepMs, true);
+  } else {
+    charge_timer_.disarm();
+  }
 }
 
 }  // namespace pillbar

@@ -444,12 +444,14 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
     switch (box.item) {
       case Item::Battery: {
         if (!state.battery.present) break;
-        Color color = config_->text;
-        if (state.battery.charging) {
-          color = config_->battery_green;
-        } else if (state.battery.percent <= config_->battery_low_percent) {
-          color = config_->battery_low;
-        }
+        const Color base = state.battery.percent <= config_->battery_low_percent
+                               ? config_->battery_low
+                               : config_->text;
+        const double mix = std::clamp(state.battery.charge_mix, 0.0, 1.0);
+        const Color color{base.r + (config_->battery_green.r - base.r) * mix,
+                          base.g + (config_->battery_green.g - base.g) * mix,
+                          base.b + (config_->battery_green.b - base.b) * mix,
+                          base.a + (config_->battery_green.a - base.a) * mix};
         const std::string glyph = battery_icon(*config_, state.battery);
         double glyph_w = 0.0;
         if (!glyph.empty()) {

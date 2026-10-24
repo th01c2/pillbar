@@ -28,6 +28,7 @@ class PowerSource : public Source {
   void arm_fallback();
   void arm_shimmer();
   void on_shimmer();
+  void on_charge_tick();
 
   AppState& state_;
   NotifyFn notify_;
@@ -38,6 +39,9 @@ class PowerSource : public Source {
   TimerFd fallback_;
   TimerFd shimmer_timer_;
   int shimmer_ms_ = 0;
+  TimerFd charge_timer_;
+  int charge_ms_ = 0;
+  double charge_from_ = 0.0;
 };
 
 }  // namespace pillbar
