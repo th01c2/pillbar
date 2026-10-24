@@ -33,12 +33,12 @@ class Renderer {
   // Natural pill width for the given state: the sum of each item's intrinsic
   // content width (icon + text + padding + gaps), clamped to the output.
   double desired_width(const Config& config, const AppState& state, int output_w,
-                       double cluster_gap) const;
+                       double cluster_t) const;
   // Positions the enabled items for a pill of width `pill_w`, centered on
   // `output_w`. Items keep their intrinsic widths, so a wider pill adds
   // breathing room rather than stretching the text.
   BarLayout compute_layout(const Config& config, const AppState& state, double pill_w,
-                           int output_w, int output_h, double cluster_gap) const;
+                           int output_w, int output_h, double cluster_t) const;
 
   void draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& state);
   void draw_tooltip(cairo_t* cr, const std::vector<std::string>& lines, double opacity,

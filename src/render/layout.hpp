@@ -11,6 +11,7 @@ namespace pillbar {
 struct ItemBox {
   Item item = Item::None;
   Rect rect;  // bar-local logical pixels
+  double alpha = 1.0;
 };
 
 struct WorkspaceSlot {
@@ -34,7 +35,8 @@ struct BarLayout {
   bool ws_focus_visible = false;
   double ws_focus_x = 0.0;
   double ws_focus_d = 0.0;
-  double cluster_gap = 0.0;
+  double cluster_t = 0.0;
+  Rect cluster_rect;
 
   const Rect* rect_for(Item item) const;
   Rect local_bounds() const { return Rect{0, 0, bar_w, bar_h}; }

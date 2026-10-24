@@ -37,24 +37,6 @@ void notch_rect(cairo_t* cr, double x, double y, double w, double h, double r) {
   cairo_close_path(cr);
 }
 
-void rounded_rect_lr(cairo_t* cr, double x, double y, double w, double h, double left,
-                     double right) {
-  const double limit = std::min(w / 2.0, h / 2.0);
-  const double l = std::clamp(left, 0.0, limit);
-  const double r = std::clamp(right, 0.0, limit);
-  cairo_new_sub_path(cr);
-  cairo_move_to(cr, x + l, y);
-  cairo_line_to(cr, x + w - r, y);
-  if (r > 0.0) cairo_arc(cr, x + w - r, y + r, r, -kPi / 2.0, 0.0);
-  cairo_line_to(cr, x + w, y + h - r);
-  if (r > 0.0) cairo_arc(cr, x + w - r, y + h - r, r, 0.0, kPi / 2.0);
-  cairo_line_to(cr, x + l, y + h);
-  if (l > 0.0) cairo_arc(cr, x + l, y + h - l, l, kPi / 2.0, kPi);
-  cairo_line_to(cr, x, y + l);
-  if (l > 0.0) cairo_arc(cr, x + l, y + l, l, kPi, 3.0 * kPi / 2.0);
-  cairo_close_path(cr);
-}
-
 void set_color(cairo_t* cr, const Color& c, double alpha_mul = 1.0) {
   cairo_set_source_rgba(cr, c.r, c.g, c.b, c.a * alpha_mul);
 }
@@ -156,12 +138,7 @@ Item item_of(const std::string& name) {
 }
 
 bool is_cluster_item(Item item) {
-  return item == Item::Battery || item == Item::Volume || item == Item::Wifi ||
-         item == Item::Bluetooth;
-}
-
-double gap_between(Item previous, Item current, double cluster_gap) {
-  return is_cluster_item(previous) && is_cluster_item(current) ? cluster_gap : kItemGap;
+  return item == Item::Volume || item == Item::Wifi;
 }
 
 // One rendered workspace numeral: its id plus the index into
@@ -260,6 +237,43 @@ double item_width(const Renderer& renderer, const Config& config, const AppState
   }
 }
 
+double cluster_merged_width(const Renderer& renderer, const Config& config) {
+  return renderer.icon_width(config.cluster_glyph) + config.cluster_capsule_pad_px * 2.0;
+}
+
+double cluster_split_width(const Renderer& renderer, const Config& config, const AppState& state) {
+  double total = config.cluster_capsule_pad_px * 2.0;
+  int count = 0;
+  for (Item item : {Item::Volume, Item::Wifi}) {
+    const double width = item_width(renderer, config, state, item);
+    if (width < 0.0) continue;
+    if (count > 0) total += config.cluster_gap_split;
+    total += width;
+    ++count;
+  }
+  return count > 0 ? total : -1.0;
+}
+
+double cluster_group_width(const Renderer& renderer, const Config& config, const AppState& state,
+                           double t) {
+  const double split = cluster_split_width(renderer, config, state);
+  if (split < 0.0) return -1.0;
+  const double merged = cluster_merged_width(renderer, config);
+  const double v = std::clamp(t, 0.0, 1.12);
+  double cursor = -split / 2.0 + config.cluster_capsule_pad_px;
+  double half = merged / 2.0;
+  for (Item item : {Item::Volume, Item::Wifi}) {
+    const double w = item_width(renderer, config, state, item);
+    if (w < 0.0) continue;
+    const double target_w = w + config.cluster_capsule_pad_px * 2.0;
+    const double final_center = cursor + w / 2.0;
+    const double width = merged + (target_w - merged) * v;
+    half = std::max(half, std::fabs(final_center) * v + width / 2.0);
+    cursor += w + config.cluster_gap_split;
+  }
+  return half * 2.0;
+}
+
 void blur_and_threshold(unsigned char* data, int width, int height, int stride, int radius) {
   if (width <= 0 || height <= 0) return;
   std::vector<unsigned int> alpha(static_cast<std::size_t>(width) * height);
@@ -324,19 +338,23 @@ void Renderer::configure(const Config& config) {
 }
 
 double Renderer::desired_width(const Config& config, const AppState& state, int output_w,
-                               double cluster_gap) const {
+                               double cluster_t) const {
   double total = kPillPad * 2.0;
   int shown = 0;
-  Item previous = Item::None;
+  bool cluster_added = false;
   for (const std::string& name : config.order) {
     const auto it = config.slots.find(name);
     if (it == config.slots.end() || !it->second.enabled) continue;
     const Item item = item_of(name);
-    const double width = item_width(*this, config, state, item);
+    const bool cluster = is_cluster_item(item);
+    if (cluster && cluster_added) continue;
+    const double width =
+        cluster ? cluster_group_width(*this, config, state, cluster_t)
+                : item_width(*this, config, state, item);
     if (width < 0.0) continue;
-    if (shown > 0) total += gap_between(previous, item, cluster_gap);
+    if (shown > 0) total += kItemGap;
     total += width;
-    previous = item;
+    if (cluster) cluster_added = true;
     ++shown;
   }
   const double max_width = static_cast<double>(output_w) * 0.96;
@@ -344,7 +362,7 @@ double Renderer::desired_width(const Config& config, const AppState& state, int 
 }
 
 BarLayout Renderer::compute_layout(const Config& config, const AppState& state, double pill_w,
-                                   int output_w, int output_h, double cluster_gap) const {
+                                   int output_w, int output_h, double cluster_t) const {
   BarLayout layout;
   layout.bar_w = std::max(1, static_cast<int>(std::lround(pill_w)));
   layout.bar_h = std::max(1, static_cast<int>(std::lround(config.height_px)));
@@ -354,21 +372,26 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
 
   struct Entry {
     Item item = Item::None;
+    bool cluster = false;
     double width = 0.0;
   };
   std::vector<Entry> entries;
   double content = 0.0;
-  Item previous_item = Item::None;
+  bool cluster_added = false;
   for (const std::string& name : config.order) {
     const auto it = config.slots.find(name);
     if (it == config.slots.end() || !it->second.enabled) continue;
     const Item item = item_of(name);
-    const double width = item_width(*this, config, state, item);
+    const bool cluster = is_cluster_item(item);
+    if (cluster && cluster_added) continue;
+    const double width =
+        cluster ? cluster_group_width(*this, config, state, cluster_t)
+                : item_width(*this, config, state, item);
     if (width < 0.0) continue;
-    if (!entries.empty()) content += gap_between(previous_item, item, cluster_gap);
+    if (!entries.empty()) content += kItemGap;
     content += width;
-    entries.push_back(Entry{item, width});
-    previous_item = item;
+    entries.push_back(Entry{item, cluster, width});
+    if (cluster) cluster_added = true;
   }
 
   // If the pill is not wide enough yet (e.g. mid-animation), take the deficit
@@ -399,9 +422,29 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
     const Entry& entry = entries[i];
     const Rect rect{static_cast<int>(std::lround(cursor_screen)) - layout.screen_x, 0,
                     std::max(1, static_cast<int>(std::lround(entry.width))), layout.bar_h};
-    layout.items.push_back(ItemBox{entry.item, rect});
+    if (entry.cluster) {
+      layout.cluster_rect = rect;
+      layout.cluster_t = cluster_t;
+      const double v = std::clamp(cluster_t, 0.0, 1.12);
+      const double alpha = std::clamp(2.0 * cluster_t - 1.0, 0.0, 1.0);
+      const double group_center = rect.x + rect.w / 2.0;
+      const double split_w = cluster_split_width(*this, config, state);
+      double item_cursor = group_center - split_w / 2.0 + config.cluster_capsule_pad_px;
+      for (Item item : {Item::Volume, Item::Wifi}) {
+        const double w = item_width(*this, config, state, item);
+        if (w < 0.0) continue;
+        const double final_center = item_cursor + w / 2.0;
+        const double center = group_center + (final_center - group_center) * v;
+        const Rect item_rect{static_cast<int>(std::lround(center - w / 2.0)), 0,
+                             std::max(1, static_cast<int>(std::lround(w))), layout.bar_h};
+        layout.items.push_back(ItemBox{item, item_rect, alpha});
+        item_cursor += w + config.cluster_gap_split;
+      }
+    } else {
+      layout.items.push_back(ItemBox{entry.item, rect, 1.0});
+    }
     if (i + 1 < entries.size()) {
-      cursor_screen += entry.width + gap_between(entry.item, entries[i + 1].item, cluster_gap);
+      cursor_screen += entry.width + kItemGap;
     }
   }
 
@@ -490,24 +533,19 @@ void Renderer::draw_tooltip(cairo_t* cr, const std::vector<std::string>& lines, 
 }
 
 void Renderer::draw_system_cluster(cairo_t* cr, const BarLayout& layout) {
+  const Rect& group = layout.cluster_rect;
+  if (group.w <= 0) return;
   std::vector<const Rect*> rects;
-  for (Item item : {Item::Battery, Item::Volume, Item::Wifi, Item::Bluetooth}) {
+  for (Item item : {Item::Volume, Item::Wifi}) {
     const Rect* rect = layout.rect_for(item);
     if (rect != nullptr) rects.push_back(rect);
   }
-  if (rects.size() < 2) return;
+  if (rects.empty()) return;
 
   const double pad = config_->cluster_capsule_pad_px;
-  double left = rects.front()->x - pad;
-  double right = rects.front()->x + rects.front()->w + pad;
-  for (const Rect* rect : rects) {
-    left = std::min(left, static_cast<double>(rect->x) - pad);
-    right = std::max(right, static_cast<double>(rect->x + rect->w) + pad);
-  }
-
   const int blur_radius = std::max(1, config_->cluster_blur_radius);
   const double margin = static_cast<double>(blur_radius) * 3.0 + 2.0;
-  const int mask_w = std::max(1, static_cast<int>(std::ceil(right - left + margin * 2.0)));
+  const int mask_w = std::max(1, static_cast<int>(std::ceil(group.w + margin * 2.0)));
   const int mask_h = std::max(1, static_cast<int>(std::ceil(layout.bar_h + margin * 2.0)));
   if (cluster_mask_ == nullptr || cluster_mask_w_ != mask_w || cluster_mask_h_ != mask_h) {
     if (cluster_mask_ != nullptr) cairo_surface_destroy(cluster_mask_);
@@ -522,21 +560,15 @@ void Renderer::draw_system_cluster(cairo_t* cr, const BarLayout& layout) {
   cairo_set_operator(mask, CAIRO_OPERATOR_OVER);
   cairo_set_source_rgba(mask, 1.0, 1.0, 1.0, 1.0);
   const double capsule_h = std::max(1.0, layout.bar_h - pad * 2.0);
-  const double capsule_r = capsule_h / 2.0;
-  const double merged = config_->cluster_gap_merged;
-  const double split = config_->cluster_gap_split;
-  const double t = split > merged
-                       ? std::clamp((layout.cluster_gap - merged) / (split - merged), 0.0, 1.0)
-                       : 1.0;
-  const double inner_r = capsule_r * t;
-  for (std::size_t i = 0; i < rects.size(); ++i) {
-    const Rect* rect = rects[i];
+  const double radius = capsule_h / 2.0;
+  const double t = std::clamp(layout.cluster_t, 0.0, 1.12);
+  const double merged = cluster_merged_width(*this, *config_);
+  for (const Rect* rect : rects) {
+    const double target_w = rect->w + pad * 2.0;
+    const double width = merged + (target_w - merged) * t;
     const double center = rect->x + rect->w / 2.0;
-    const double width = rect->w + pad * 2.0;
-    const double left_r = i == 0 ? capsule_r : inner_r;
-    const double right_r = i + 1 == rects.size() ? capsule_r : inner_r;
-    rounded_rect_lr(mask, center - width / 2.0 - left + margin, pad + margin, width, capsule_h,
-                    left_r, right_r);
+    rounded_rect(mask, center - width / 2.0 - group.x + margin, pad + margin, width, capsule_h,
+                 radius);
     cairo_fill(mask);
   }
   cairo_destroy(mask);
@@ -549,8 +581,16 @@ void Renderer::draw_system_cluster(cairo_t* cr, const BarLayout& layout) {
   cairo_save(cr);
   cairo_set_source_rgba(cr, config_->cluster_color.r, config_->cluster_color.g,
                         config_->cluster_color.b, config_->cluster_color.a);
-  cairo_mask_surface(cr, cluster_mask_, left - margin, -margin);
+  cairo_mask_surface(cr, cluster_mask_, group.x - margin, -margin);
   cairo_restore(cr);
+
+  const double system_alpha = std::clamp(1.0 - 2.0 * t, 0.0, 1.0);
+  if (system_alpha > 0.0 && !config_->cluster_glyph.empty()) {
+    Color color = config_->text;
+    color.a *= system_alpha;
+    icon_text_.draw_center(cr, group.x + group.w / 2.0, layout.bar_h / 2.0,
+                           config_->cluster_glyph, color);
+  }
 }
 
 void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& state) {
@@ -594,6 +634,14 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
   const double center_y = layout.bar_h / 2.0;
 
   for (const ItemBox& box : layout.items) {
+    if (box.alpha <= 0.01) continue;
+    const bool fading = box.alpha < 0.999;
+    if (fading) {
+      cairo_save(cr);
+      cairo_rectangle(cr, box.rect.x, box.rect.y, box.rect.w, box.rect.h);
+      cairo_clip(cr);
+      cairo_push_group(cr);
+    }
     const Rect& r = box.rect;
     switch (box.item) {
       case Item::Battery: {
@@ -803,6 +851,11 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       }
       default:
         break;
+    }
+    if (fading) {
+      cairo_pop_group_to_source(cr);
+      cairo_paint_with_alpha(cr, std::clamp(box.alpha, 0.0, 1.0));
+      cairo_restore(cr);
     }
   }
   cairo_restore(cr);

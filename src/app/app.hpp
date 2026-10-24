@@ -68,9 +68,9 @@ struct Bar {
   std::chrono::steady_clock::time_point ws_anim_start;
   TimerFd ws_timer;
 
-  double cluster_gap = 6.0;
+  double cluster_t = 0.0;
   double cluster_velocity = 0.0;
-  double cluster_target = 6.0;
+  double cluster_target = 0.0;
   bool cluster_split = false;
   bool cluster_animating = false;
   TimerFd cluster_timer;

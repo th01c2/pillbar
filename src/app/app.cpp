@@ -205,9 +205,9 @@ void App::create_bar(Output& output) {
   bar->scale = output.scale();
   if (bar->output_w <= 0 || bar->output_h <= 0) return;
   bar->bar_h = std::max(1, static_cast<int>(std::lround(config_.height_px)));
-  bar->cluster_gap = config_.cluster_gap_merged;
-  bar->cluster_target = config_.cluster_gap_merged;
-  bar->pill_w = renderer_.desired_width(config_, state_, bar->output_w, bar->cluster_gap);
+  bar->cluster_t = 0.0;
+  bar->cluster_target = 0.0;
+  bar->pill_w = renderer_.desired_width(config_, state_, bar->output_w, bar->cluster_t);
   bar->pill_target = bar->pill_w;
   const int top = static_cast<int>(std::lround(bar->output_h * config_.margin_top_frac));
   LOG_DEBUG("creating bar on %s: output=%dx%d pill=%.0fx%d scale=%.2f",
@@ -402,11 +402,13 @@ void App::on_pointer_enter(wl_surface* surface, double x, double y) {
 void App::on_pointer_motion(wl_surface* surface, double x, double y) {
   Bar* bar = bar_for_surface(surface);
   if (bar == nullptr) return;
+  const bool over_cluster = in_cluster(*bar, x, y);
   const int previous_ws = bar->hover_ws;  // hit_test overwrites this
   const Item item = hit_test(*bar, x, y);
   // Clickable items show the hand cursor, everything else the arrow.
   if (Pointer* pointer = display_.pointer()) {
-    pointer->set_cursor(item == Item::Workspaces || item == Item::Recorder, bar->scale);
+    pointer->set_cursor(over_cluster || item == Item::Workspaces || item == Item::Recorder,
+                        bar->scale);
   }
   // Every workspace numeral is the same item, so also react when the specific
   // circle under the pointer changes — otherwise the previous workspace's
@@ -416,7 +418,7 @@ void App::on_pointer_motion(wl_surface* surface, double x, double y) {
   if (item == bar->hover && !workspace_changed) return;
 
   bar->hover = item;
-  if (item == Item::None) {
+  if (item == Item::None || (over_cluster && bar->cluster_t < 0.5)) {
     hide_tooltip(*bar);
     bar->hover_delay.disarm();
     return;
@@ -497,8 +499,7 @@ void App::redraw_bar(Bar& bar, Item items) {
     return;
   }
   bar.layout = renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w,
-                                        bar.output_h, bar.cluster_gap);
-  bar.layout.cluster_gap = bar.cluster_gap;
+                                        bar.output_h, bar.cluster_t);
   update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);
   cairo_t* cr = bar.canvas->begin();
@@ -525,7 +526,7 @@ void App::redraw_bar(Bar& bar, Item items) {
 
 void App::update_target_width(Bar& bar) {
   const double target =
-      renderer_.desired_width(config_, state_, bar.output_w, bar.cluster_gap);
+      renderer_.desired_width(config_, state_, bar.output_w, bar.cluster_t);
   // Titles that animate (spinners, progress) change the measured width by a
   // few pixels every frame; ignore changes below this deadband so the notch
   // does not sit there vibrating.
@@ -646,18 +647,18 @@ void App::on_cluster_tick(Bar& bar) {
   constexpr double dt = 0.016;
   constexpr double stiffness = 196.0;
   constexpr double damping = 15.4;
-  const double delta = bar.cluster_gap - bar.cluster_target;
+  const double delta = bar.cluster_t - bar.cluster_target;
   const double accel = -stiffness * delta - damping * bar.cluster_velocity;
   bar.cluster_velocity += accel * dt;
-  bar.cluster_gap += bar.cluster_velocity * dt;
-  if (std::fabs(bar.cluster_gap - bar.cluster_target) < 0.05 &&
-      std::fabs(bar.cluster_velocity) < 0.5) {
-    bar.cluster_gap = bar.cluster_target;
+  bar.cluster_t += bar.cluster_velocity * dt;
+  if (std::fabs(bar.cluster_t - bar.cluster_target) < 0.002 &&
+      std::fabs(bar.cluster_velocity) < 0.01) {
+    bar.cluster_t = bar.cluster_target;
     bar.cluster_velocity = 0.0;
     bar.cluster_animating = false;
     bar.cluster_timer.disarm();
   }
-  bar.pill_w = renderer_.desired_width(config_, state_, bar.output_w, bar.cluster_gap);
+  bar.pill_w = renderer_.desired_width(config_, state_, bar.output_w, bar.cluster_t);
   bar.pill_target = bar.pill_w;
   bar.animating = false;
   bar.anim_timer.disarm();
@@ -667,9 +668,9 @@ void App::on_cluster_tick(Bar& bar) {
 
 void App::set_cluster_split(Bar& bar, bool split) {
   bar.cluster_split = split;
-  bar.cluster_target = split ? config_.cluster_gap_split : config_.cluster_gap_merged;
+  bar.cluster_target = split ? 1.0 : 0.0;
   if (!bar.cluster_timer.valid()) return;
-  if (std::fabs(bar.cluster_gap - bar.cluster_target) < 0.01) {
+  if (std::fabs(bar.cluster_t - bar.cluster_target) < 0.002) {
     bar.cluster_animating = false;
     bar.cluster_velocity = 0.0;
     bar.cluster_timer.disarm();
@@ -681,18 +682,10 @@ void App::set_cluster_split(Bar& bar, bool split) {
 
 bool App::in_cluster(Bar& bar, double x, double y) {
   x -= bar.layout.screen_x;
-  double left = 1e9;
-  double right = -1e9;
-  bool any = false;
-  for (Item item : {Item::Battery, Item::Volume, Item::Wifi, Item::Bluetooth}) {
-    const Rect* rect = bar.layout.rect_for(item);
-    if (rect == nullptr) continue;
-    left = std::min(left, static_cast<double>(rect->x));
-    right = std::max(right, static_cast<double>(rect->x + rect->w));
-    any = true;
-  }
-  if (!any) return false;
-  return x >= left - 6.0 && x <= right + 6.0 && y >= 0.0 && y <= bar.layout.bar_h;
+  const Rect& rect = bar.layout.cluster_rect;
+  if (rect.w <= 0) return false;
+  return x >= rect.x - 4.0 && x <= rect.x + rect.w + 4.0 && y >= 0.0 &&
+         y <= bar.layout.bar_h;
 }
 
 std::vector<std::string> App::tooltip_lines(Item item, Bar& bar) const {
