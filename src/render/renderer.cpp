@@ -117,12 +117,12 @@ std::string wifi_icon(const Config& config, const WifiState& wifi) {
 
 std::string wifi_band_label(const WifiState& wifi) {
   if (!wifi.connected || wifi.wired) return {};
-  if (wifi.freq >= 5925) return "6";
-  if (wifi.freq >= 4900) return "5";
-  if (wifi.freq >= 2400) return "2.4";
-  if (wifi.band.find("6") != std::string::npos) return "6";
-  if (wifi.band.find("5") != std::string::npos) return "5";
-  if (wifi.band.find("2") != std::string::npos) return "2.4";
+  if (wifi.freq >= 5925) return "6GHz";
+  if (wifi.freq >= 4900) return "5GHz";
+  if (wifi.freq >= 2400) return "2.4GHz";
+  if (wifi.band.find("6") != std::string::npos) return "6GHz";
+  if (wifi.band.find("5") != std::string::npos) return "5GHz";
+  if (wifi.band.find("2") != std::string::npos) return "2.4GHz";
   return {};
 }
 
