@@ -476,10 +476,13 @@ void App::redraw_bar(Bar& bar, Item items) {
     return;
   }
   bar.layout = renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
+  const int pad = static_cast<int>(std::lround(config_.pill_pad_px));
   for (ItemBox& box : bar.layout.items) {
-    if (box.item != Item::Clock) continue;
-    box.rect.x = bar.layout.bar_w - static_cast<int>(std::lround(config_.pill_pad_px)) - box.rect.w;
-    break;
+    if (box.item == Item::Battery) {
+      box.rect.x = pad;
+    } else if (box.item == Item::Clock) {
+      box.rect.x = bar.layout.bar_w - pad - box.rect.w;
+    }
   }
   update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);
