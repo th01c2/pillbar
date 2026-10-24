@@ -1,7 +1,9 @@
 #pragma once
 
 #include <chrono>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -68,6 +70,16 @@ struct Bar {
   std::chrono::steady_clock::time_point ws_anim_start;
   TimerFd ws_timer;
 
+  struct AppearState {
+    bool active = false;
+    std::chrono::steady_clock::time_point start;
+    double delay_ms = 0.0;
+  };
+  std::map<Item, AppearState> appear;
+  std::set<Item> known_items;
+  bool seen_initial = false;
+  TimerFd appear_timer;
+
   // Hover / tooltip state.
   Item hover = Item::None;
   int hover_ws = -1;
@@ -105,6 +117,8 @@ class App {
   void on_anim_tick(Bar& bar);
   void update_workspace_focus(Bar& bar);
   void on_ws_tick(Bar& bar);
+  void update_item_appears(Bar& bar);
+  void on_appear_tick(Bar& bar);
   void update_tooltip(Bar& bar);
   void show_tooltip(Bar& bar);
   void hide_tooltip(Bar& bar);

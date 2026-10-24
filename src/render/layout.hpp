@@ -11,6 +11,8 @@ namespace pillbar {
 struct ItemBox {
   Item item = Item::None;
   Rect rect;  // bar-local logical pixels
+  double alpha = 1.0;
+  double scale_x = 1.0;
 };
 
 struct WorkspaceSlot {

@@ -321,6 +321,12 @@ void App::create_bar(Output& output) {
   });
   bar->ws_timer.disarm();
 
+  loop_.add(bar->appear_timer.get(), EPOLLIN, [this, raw](std::uint32_t) {
+    raw->appear_timer.consume();
+    on_appear_tick(*raw);
+  });
+  bar->appear_timer.disarm();
+
   bars_.push_back(std::move(bar));
 }
 
@@ -330,6 +336,7 @@ void App::destroy_bars() {
     if (bar->fade_timer.valid()) loop_.del(bar->fade_timer.get());
     if (bar->anim_timer.valid()) loop_.del(bar->anim_timer.get());
     if (bar->ws_timer.valid()) loop_.del(bar->ws_timer.get());
+    if (bar->appear_timer.valid()) loop_.del(bar->appear_timer.get());
   }
   bars_.clear();
   tooltip_bar_ = nullptr;
@@ -485,6 +492,7 @@ void App::redraw_bar(Bar& bar, Item items) {
   }
   bar.layout =
       renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
+  update_item_appears(bar);
   update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);
   cairo_t* cr = bar.canvas->begin();
@@ -538,13 +546,16 @@ void App::on_anim_tick(Bar& bar) {
   // Fixed-duration ease-out: the exponential approach used before had a long
   // sub-pixel tail, which made the text look like it was shivering for a few
   // hundred milliseconds after every resize.
-  constexpr double kDurationSeconds = 0.16;
+  constexpr double kDurationSeconds = 0.40;
   const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() -
                                                        bar.anim_start)
                              .count();
   double progress = elapsed / kDurationSeconds;
   if (progress >= 1.0) progress = 1.0;
-  const double eased = 1.0 - std::pow(1.0 - progress, 3.0);
+  constexpr double kBack = 1.2;
+  const double back3 = kBack + 1.0;
+  const double eased =
+      1.0 + back3 * std::pow(progress - 1.0, 3.0) + kBack * std::pow(progress - 1.0, 2.0);
   bar.pill_w = bar.anim_from + (bar.pill_target - bar.anim_from) * eased;
   if (progress >= 1.0) {
     bar.pill_w = bar.pill_target;
@@ -624,6 +635,60 @@ void App::on_ws_tick(Bar& bar) {
     bar.ws_timer.arm_relative_ms(16, false);
   } else {
     bar.ws_timer.disarm();
+  }
+}
+
+void App::update_item_appears(Bar& bar) {
+  const auto now = std::chrono::steady_clock::now();
+  std::set<Item> visible;
+  int new_count = 0;
+  for (const ItemBox& box : bar.layout.items) {
+    if (bar.seen_initial && bar.known_items.count(box.item) == 0) {
+      Bar::AppearState& state = bar.appear[box.item];
+      state.active = true;
+      state.start = now;
+      state.delay_ms = 35.0 * static_cast<double>(new_count);
+      ++new_count;
+    }
+    visible.insert(box.item);
+  }
+  bar.known_items = std::move(visible);
+  bar.seen_initial = true;
+
+  for (ItemBox& box : bar.layout.items) {
+    const auto it = bar.appear.find(box.item);
+    if (it == bar.appear.end() || !it->second.active) continue;
+    Bar::AppearState& state = it->second;
+    const double elapsed =
+        std::chrono::duration<double, std::milli>(now - state.start).count() - state.delay_ms;
+    if (elapsed < 0.0) {
+      box.alpha = 0.0;
+      box.scale_x = 0.95;
+      if (bar.appear_timer.valid()) bar.appear_timer.arm_relative_ms(16, true);
+      continue;
+    }
+    const double progress = std::clamp(elapsed / 280.0, 0.0, 1.0);
+    const double eased = 1.0 - std::pow(1.0 - progress, 3.0);
+    box.alpha = eased;
+    box.scale_x = 0.95 + 0.05 * eased;
+    if (progress >= 1.0) {
+      state.active = false;
+    } else if (bar.appear_timer.valid()) {
+      bar.appear_timer.arm_relative_ms(16, true);
+    }
+  }
+}
+
+void App::on_appear_tick(Bar& bar) {
+  redraw_bar(bar, Item::All);
+  bool any = false;
+  for (const auto& entry : bar.appear) {
+    if (entry.second.active) any = true;
+  }
+  if (any) {
+    if (bar.appear_timer.valid()) bar.appear_timer.arm_relative_ms(16, true);
+  } else if (bar.appear_timer.valid()) {
+    bar.appear_timer.disarm();
   }
 }
 
