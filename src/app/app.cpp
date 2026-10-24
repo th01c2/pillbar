@@ -490,11 +490,12 @@ void App::redraw_bar(Bar& bar, Item items) {
       if (box.item == Item::Battery || box.item == Item::Clock) continue;
       const auto it = bar.anim_from_x.find(box.item);
       if (it == bar.anim_from_x.end()) continue;
-      const int target_x = box.rect.x;
-      const int x = static_cast<int>(
-          std::lround(it->second + (target_x - it->second) * bar.anim_progress));
-      if (box.item == Item::Workspaces) ws_delta += x - box.rect.x;
-      box.rect.x = x;
+      const int target_screen_x = bar.layout.screen_x + box.rect.x;
+      const int screen_x = static_cast<int>(
+          std::lround(it->second + (target_screen_x - it->second) * bar.anim_progress));
+      const int local_x = screen_x - bar.layout.screen_x;
+      if (box.item == Item::Workspaces) ws_delta += local_x - box.rect.x;
+      box.rect.x = local_x;
     }
     if (ws_delta != 0) {
       for (WorkspaceSlot& slot : bar.layout.workspace_slots) slot.cx += ws_delta;
@@ -543,7 +544,9 @@ void App::update_target_width(Bar& bar) {
   }
   if (!bar.anim_timer.valid()) return;
   bar.anim_from_x.clear();
-  for (const ItemBox& box : bar.layout.items) bar.anim_from_x[box.item] = box.rect.x;
+  for (const ItemBox& box : bar.layout.items) {
+    bar.anim_from_x[box.item] = bar.layout.screen_x + box.rect.x;
+  }
   bar.anim_progress = 0.0;
   bar.anim_from = bar.pill_w;
   bar.anim_start = std::chrono::steady_clock::now();
