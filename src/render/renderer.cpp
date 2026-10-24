@@ -521,7 +521,7 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
         } else {
           const double glyph_w = icon_text_.measure(glyph);
           icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, icon_color);
-          text_.draw_left(cr, r.x + glyph_w + kIconGap, center_y, label, config_->dim);
+          text_.draw_left(cr, r.x + glyph_w + kIconGap, center_y, label, config_->text);
         }
         break;
       }
