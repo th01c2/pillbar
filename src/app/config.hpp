@@ -115,8 +115,8 @@ struct Config {
   // --- items ---
   // Window item omitted on purpose: the app name + title took the most width
   // for the least information. Add "window" back here to restore it.
-  std::vector<std::string> order{"battery", "volume", "wifi",  "bluetooth",
-                                 "clock",   "recorder", "workspaces"};
+  std::vector<std::string> order{"battery",    "volume",   "wifi", "bluetooth",
+                                 "workspaces", "recorder", "clock"};
   std::map<std::string, ItemSlot> slots;
 
   // --- tooltip ---
