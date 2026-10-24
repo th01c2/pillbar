@@ -477,12 +477,36 @@ void App::redraw_bar(Bar& bar, Item items) {
   }
   bar.layout = renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
   const int pad = static_cast<int>(std::lround(config_.pill_pad_px));
-  for (ItemBox& box : bar.layout.items) {
-    if (box.item == Item::Battery) {
-      box.rect.x = pad;
-    } else if (box.item == Item::Clock) {
-      box.rect.x = bar.layout.bar_w - pad - box.rect.w;
+  const int gap = static_cast<int>(std::lround(config_.item_gap_px));
+  std::size_t ws_index = bar.layout.items.size();
+  for (std::size_t i = 0; i < bar.layout.items.size(); ++i) {
+    if (bar.layout.items[i].item == Item::Workspaces) {
+      ws_index = i;
+      break;
     }
+  }
+  int cursor = pad;
+  for (std::size_t i = 0; i < ws_index; ++i) {
+    ItemBox& box = bar.layout.items[i];
+    box.rect.x = cursor;
+    cursor += box.rect.w + gap;
+  }
+  const int left_end = cursor;
+  cursor = bar.layout.bar_w - pad;
+  const std::size_t right_start =
+      ws_index < bar.layout.items.size() ? ws_index + 1 : bar.layout.items.size();
+  for (std::size_t i = bar.layout.items.size(); i > right_start; --i) {
+    ItemBox& box = bar.layout.items[i - 1];
+    box.rect.x = cursor - box.rect.w;
+    cursor -= box.rect.w + gap;
+  }
+  const int right_limit = cursor;
+  if (ws_index < bar.layout.items.size()) {
+    ItemBox& ws = bar.layout.items[ws_index];
+    const int available = std::max(0, right_limit - left_end);
+    ws.rect.w = std::max(1, std::min(ws.rect.w, available));
+    ws.rect.x = left_end + std::max(0, (available - ws.rect.w) / 2);
+    renderer_.recompute_workspace_slots(bar.layout, config_, state_);
   }
   update_workspace_focus(bar);
   renderer_.set_scale(bar.scale);

@@ -36,6 +36,8 @@ class Renderer {
   // breathing room rather than stretching the text.
   BarLayout compute_layout(const Config& config, const AppState& state, double pill_w, int output_w,
                            int output_h) const;
+  void recompute_workspace_slots(BarLayout& layout, const Config& config,
+                                 const AppState& state) const;
 
   void draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& state);
   void draw_tooltip(cairo_t* cr, const std::vector<std::string>& lines, double opacity,
