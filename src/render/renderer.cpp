@@ -161,7 +161,6 @@ std::string wifi_band_label(const WifiState& wifi) {
 }
 
 // Layout metrics (logical pixels).
-constexpr double kItemGap = 12.0;     // space between items
 constexpr double kIconGap = 6.0;      // icon -> label inside an item
 constexpr double kNameTitleGap = 8.0; // app name -> window title
 constexpr int kAppNameMaxChars = 20;
@@ -300,7 +299,7 @@ double Renderer::desired_width(const Config& config, const AppState& state, int 
     if (it == config.slots.end() || !it->second.enabled) continue;
     const double width = item_width(*this, config, state, item_for(name));
     if (width < 0.0) continue;
-    if (shown > 0) total += kItemGap;
+    if (shown > 0) total += config.item_gap_px;
     total += width;
     ++shown;
   }
@@ -329,7 +328,7 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
     const Item item = item_for(name);
     const double width = item_width(*this, config, state, item);
     if (width < 0.0) continue;
-    if (!entries.empty()) content += kItemGap;
+    if (!entries.empty()) content += config.item_gap_px;
     content += width;
     entries.push_back(Entry{item, width});
   }
@@ -360,7 +359,7 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
     const Rect rect{static_cast<int>(std::lround(cursor_screen)) - layout.screen_x, 0,
                     std::max(1, static_cast<int>(std::lround(entry.width))), layout.bar_h};
     layout.items.push_back(ItemBox{entry.item, rect});
-    cursor_screen += entry.width + kItemGap;
+    cursor_screen += entry.width + config.item_gap_px;
   }
 
   for (const ItemBox& box : layout.items) {

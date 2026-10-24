@@ -477,9 +477,12 @@ void App::redraw_bar(Bar& bar, Item items) {
   }
   bar.layout = renderer_.compute_layout(config_, state_, bar.pill_w, bar.output_w, bar.output_h);
   const int pad = static_cast<int>(std::lround(config_.pill_pad_px));
+  const int gap = static_cast<int>(std::lround(config_.item_gap_px));
+  int left = pad;
   for (ItemBox& box : bar.layout.items) {
-    if (box.item == Item::Battery) {
-      box.rect.x = pad;
+    if (box.item == Item::Battery || box.item == Item::Volume) {
+      box.rect.x = left;
+      left += box.rect.w + gap;
     } else if (box.item == Item::Clock) {
       box.rect.x = bar.layout.bar_w - pad - box.rect.w;
     }
@@ -487,7 +490,9 @@ void App::redraw_bar(Bar& bar, Item items) {
   if (bar.anim_progress < 1.0) {
     int ws_delta = 0;
     for (ItemBox& box : bar.layout.items) {
-      if (box.item == Item::Battery || box.item == Item::Clock) continue;
+      if (box.item == Item::Battery || box.item == Item::Volume || box.item == Item::Clock) {
+        continue;
+      }
       const auto it = bar.anim_from_x.find(box.item);
       if (it == bar.anim_from_x.end()) continue;
       const int target_screen_x = bar.layout.screen_x + box.rect.x;
