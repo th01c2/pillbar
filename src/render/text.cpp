@@ -222,9 +222,11 @@ void TextRenderer::draw_center_fill(cairo_t* cr, double center_x, double center_
   pango_cairo_layout_path(cr, layout);
   cairo_clip(cr);
 
-  cairo_pattern_t* pattern = cairo_pattern_create_linear(left, bottom, left, edge);
-  cairo_pattern_add_color_stop_rgba(pattern, 0.0, color.r, color.g, color.b, color.a);
-  cairo_pattern_add_color_stop_rgba(pattern, 1.0, color.r, color.g, color.b, 0.0);
+  cairo_pattern_t* pattern = cairo_pattern_create_linear(left, edge, left, bottom);
+  cairo_pattern_add_color_stop_rgba(pattern, 0.0, color.r, color.g, color.b,
+                                    std::min(1.0, color.a * 1.8));
+  cairo_pattern_add_color_stop_rgba(pattern, 0.12, color.r, color.g, color.b, color.a);
+  cairo_pattern_add_color_stop_rgba(pattern, 1.0, color.r, color.g, color.b, color.a * 0.25);
   cairo_set_source(cr, pattern);
   cairo_rectangle(cr, left, edge, static_cast<double>(ink.width), bottom - edge);
   cairo_fill(cr);

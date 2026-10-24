@@ -15,8 +15,8 @@ namespace pillbar {
 
 namespace {
 
-constexpr int kShimmerStepMs = 80;
-constexpr int kShimmerPeriodMs = 2500;
+constexpr int kShimmerStepMs = 50;
+constexpr int kShimmerPeriodMs = 1600;
 
 }  // namespace
 

@@ -110,7 +110,7 @@ struct Config {
   Color ws_focus_ring_color = rgb(0x8f9cf0, 0.5);
   Color battery_green = rgb(0x3ddc5a);
   Color battery_low = rgb(0xff5555);
-  Color battery_charge_fill = rgb(0xffffff, 0.22);
+  Color battery_charge_fill = rgb(0xffffff, 0.35);
   // At or below this charge the battery glyph and percent turn red.
   int battery_low_percent = 20;
   Color window_icon = rgb(0x6f7fd8);
