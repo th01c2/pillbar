@@ -34,7 +34,8 @@ struct BarLayout {
   bool ws_focus_visible = false;
   double ws_focus_x = 0.0;
   double ws_focus_d = 0.0;
-  double ws_focus_stretch = 0.0;
+  double ws_focus_wobble = 0.0;
+  double ws_focus_phase = 0.0;
 
   const Rect* rect_for(Item item) const;
   Rect local_bounds() const { return Rect{0, 0, bar_w, bar_h}; }
