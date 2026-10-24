@@ -90,7 +90,6 @@ void PowerSource::rescan() {
   BatteryState battery;
   bool ac_online = false;
   bool found_battery = false;
-  std::string battery_status;
 
   for (const std::string& entry : sysfs::list_directory(base)) {
     const std::string dir = base + "/" + entry;
@@ -113,7 +112,6 @@ void PowerSource::rescan() {
     }
     std::string status;
     if (sysfs::read_string(dir + "/status", &status)) {
-      battery_status = status;
       battery.charging = status == "Charging";
       battery.full = status == "Full";
     }
@@ -151,13 +149,6 @@ void PowerSource::rescan() {
 
   if (!found_battery) battery.present = false;
   battery.ac_online = ac_online;
-  // Some firmware stops charging at a configured limit and reports
-  // "Not charging" while AC stays connected, and right after a fast unplug/
-  // replug the status file can still read "Discharging". Treat AC online as
-  // charging so the plugged state is always shown.
-  if (found_battery && (ac_online || battery_status == "Charging")) {
-    battery.charging = true;
-  }
   const bool first_reading = !state_.battery.present;
   const bool charge_changed = !first_reading && battery.charging != state_.battery.charging;
   battery.shimmer = battery.charging ? state_.battery.shimmer : 0.0;

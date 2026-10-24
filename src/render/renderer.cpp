@@ -124,7 +124,7 @@ int battery_icon_index(int percent) {
 }
 
 std::string battery_icon(const Config& config, const BatteryState& battery) {
-  const bool charging = battery.charging || battery.full;
+  const bool charging = battery.charging;
   const std::vector<std::string>& set = charging ? config.battery_charging : config.battery_levels;
   if (set.empty()) return {};
   const std::size_t index = std::min<std::size_t>(
