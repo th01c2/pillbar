@@ -220,7 +220,7 @@ double item_width(const Renderer& renderer, const Config& config, const AppState
     return width;
   }
   case Item::Clock:
-    return renderer.clock_width(format_clock(state.clock));
+    return renderer.text_width(format_clock(state.clock));
   case Item::Recorder:
     if (!state.recorder.active) return -1.0;
     return renderer.icon_width(config.recorder_glyph);
@@ -251,8 +251,6 @@ void Renderer::configure(const Config& config) {
   icon_text_.configure(config.icon_fonts, std::max(1.0, config.height_px * config.icon_size_frac),
                        0.0,
                        /*antialias=*/true);
-  clock_text_.configure(config.fonts, config.clock_font_size_px, config.letter_spacing,
-                        config.smooth_text);
   tooltip_text_.configure(config.fonts, config.tooltip_font_size_px, config.letter_spacing,
                           config.smooth_text);
 }
@@ -585,8 +583,7 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
     }
     case Item::Clock: {
       const double center_x = r.x + r.w / 2.0;
-      clock_text_.draw_center(cr, center_x, center_y, format_clock(state.clock),
-                              config_->clock_color);
+      text_.draw_center(cr, center_x, center_y, format_clock(state.clock), config_->clock_color);
       break;
     }
     case Item::Recorder: {
