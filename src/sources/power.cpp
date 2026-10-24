@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <cmath>
 #include <cstring>
 #include <string>
 
@@ -17,6 +18,7 @@ namespace {
 
 constexpr int kShimmerStepMs = 50;
 constexpr int kShimmerPeriodMs = 1600;
+constexpr double kPi = 3.14159265358979323846;
 
 }  // namespace
 
@@ -191,8 +193,9 @@ void PowerSource::on_shimmer() {
     return;
   }
   shimmer_ms_ = (shimmer_ms_ + kShimmerStepMs) % kShimmerPeriodMs;
+  const double phase = static_cast<double>(shimmer_ms_) / kShimmerPeriodMs;
   BatteryState next = state_.battery;
-  next.shimmer = static_cast<double>(shimmer_ms_) / kShimmerPeriodMs;
+  next.shimmer = 0.5 - 0.5 * std::cos(2.0 * kPi * phase);
   if (!(next == state_.battery)) {
     state_.battery = next;
     if (notify_) notify_(Item::Battery);
