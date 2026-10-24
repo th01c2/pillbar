@@ -112,7 +112,6 @@ void PowerSource::rescan() {
     }
     std::string status;
     if (sysfs::read_string(dir + "/status", &status)) {
-      battery.charging = status == "Charging";
       battery.full = status == "Full";
     }
     long energy_now = 0;
@@ -149,9 +148,7 @@ void PowerSource::rescan() {
 
   if (!found_battery) battery.present = false;
   battery.ac_online = ac_online;
-  if (found_battery && !ac_online) {
-    battery.charging = false;
-  }
+  battery.charging = found_battery && ac_online;
   const bool first_reading = !state_.battery.present;
   const bool charge_changed = !first_reading && battery.charging != state_.battery.charging;
   battery.shimmer = battery.charging ? state_.battery.shimmer : 0.0;
