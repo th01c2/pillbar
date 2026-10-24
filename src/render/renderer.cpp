@@ -464,7 +464,12 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
           }
         }
         const double text_x = r.x + glyph_w + kIconGap;
-        text_.draw_left(cr, text_x, center_y, format_percent(state.battery.percent), color);
+        const std::string label = format_percent(state.battery.percent);
+        text_.draw_left(cr, text_x, center_y, label, color);
+        if (state.battery.charging) {
+          text_.draw_left_fill(cr, text_x, center_y, label, config_->battery_charge_fill,
+                               state.battery.shimmer);
+        }
         break;
       }
       case Item::Volume: {

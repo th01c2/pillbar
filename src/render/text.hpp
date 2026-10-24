@@ -30,6 +30,8 @@ class TextRenderer {
                    const Color& color) const;
   void draw_center_fill(cairo_t* cr, double center_x, double center_y, const std::string& text,
                         const Color& color, double level) const;
+  void draw_left_fill(cairo_t* cr, double x, double center_y, const std::string& text,
+                      const Color& color, double level) const;
 
  private:
   mutable std::vector<std::string> families_;

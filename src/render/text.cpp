@@ -236,4 +236,46 @@ void TextRenderer::draw_center_fill(cairo_t* cr, double center_x, double center_
   g_object_unref(layout);
 }
 
+void TextRenderer::draw_left_fill(cairo_t* cr, double x, double center_y,
+                                  const std::string& text, const Color& color,
+                                  double level) const {
+  if (text.empty() || level <= 0.0 || color.a <= 0.0) return;
+  PangoLayout* layout =
+      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, nullptr);
+  const std::string safe = sanitize_utf8(text);
+  pango_layout_set_text(layout, safe.c_str(), -1);
+  PangoRectangle ink{};
+  pango_layout_get_pixel_extents(layout, &ink, nullptr);
+  if (ink.width <= 0 || ink.height <= 0) {
+    g_object_unref(layout);
+    return;
+  }
+
+  const double origin_x = x - static_cast<double>(ink.x);
+  const double origin_y =
+      center_y - static_cast<double>(ink.y) - static_cast<double>(ink.height) / 2.0;
+  const double bottom = center_y + static_cast<double>(ink.height) / 2.0;
+  const double edge = bottom - static_cast<double>(ink.height) * std::clamp(level, 0.0, 1.0);
+
+  cairo_save(cr);
+  cairo_new_path(cr);
+  cairo_move_to(cr, origin_x, origin_y);
+  pango_cairo_update_layout(cr, layout);
+  pango_cairo_layout_path(cr, layout);
+  cairo_clip(cr);
+
+  cairo_pattern_t* pattern = cairo_pattern_create_linear(x, edge, x, bottom);
+  cairo_pattern_add_color_stop_rgba(pattern, 0.0, color.r, color.g, color.b,
+                                    std::min(1.0, color.a * 1.8));
+  cairo_pattern_add_color_stop_rgba(pattern, 0.16, color.r, color.g, color.b, color.a);
+  cairo_pattern_add_color_stop_rgba(pattern, 1.0, color.r, color.g, color.b, color.a * 0.25);
+  cairo_set_source(cr, pattern);
+  cairo_rectangle(cr, x, edge, static_cast<double>(ink.width), bottom - edge);
+  cairo_fill(cr);
+  cairo_pattern_destroy(pattern);
+  cairo_restore(cr);
+
+  g_object_unref(layout);
+}
+
 }  // namespace pillbar
