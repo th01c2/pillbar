@@ -611,7 +611,7 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
     }
     case Item::Clock: {
       const double center_x = r.x + r.w / 2.0;
-      text_.draw_center(cr, center_x, center_y, format_clock(state.clock), config_->text);
+      text_.draw_center(cr, center_x, center_y, format_clock(state.clock), config_->clock_color);
       break;
     }
     case Item::Recorder: {
