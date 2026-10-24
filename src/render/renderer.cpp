@@ -527,17 +527,22 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
 
         if (layout.ws_focus_visible && layout.ws_focus_d > 0.0) {
           const double radius = layout.ws_focus_d / 2.0;
+          const double stretch = std::clamp(layout.ws_focus_stretch, 0.0, 0.6);
+          cairo_save(cr);
+          cairo_translate(cr, layout.ws_focus_x, center_y);
+          cairo_scale(cr, 1.0 + stretch, 1.0 - stretch * 0.35);
           set_color(cr, config_->ws_focused);
-          cairo_arc(cr, layout.ws_focus_x, center_y, radius, 0.0, 2.0 * kPi);
+          cairo_arc(cr, 0.0, 0.0, radius, 0.0, 2.0 * kPi);
           cairo_fill(cr);
           if (config_->ws_focus_ring) {
             const double ring_w = std::max(
                 1.0 / scale_, std::round(layout.ws_focus_d * 0.10 * scale_) / scale_);
             set_color(cr, config_->ws_focus_ring_color);
             cairo_set_line_width(cr, ring_w);
-            cairo_arc(cr, layout.ws_focus_x, center_y, radius + ring_w / 2.0, 0.0, 2.0 * kPi);
+            cairo_arc(cr, 0.0, 0.0, radius + ring_w / 2.0, 0.0, 2.0 * kPi);
             cairo_stroke(cr);
           }
+          cairo_restore(cr);
         }
 
         for (const WorkspaceSlot& slot : layout.workspace_slots) {

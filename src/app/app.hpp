@@ -60,6 +60,7 @@ struct Bar {
   int ws_focus_id = -1;
   double ws_focus_x = 0.0;
   double ws_focus_d = 0.0;
+  double ws_focus_stretch = 0.0;
   bool ws_animating = false;
   double ws_anim_from_x = 0.0;
   double ws_anim_to_x = 0.0;
