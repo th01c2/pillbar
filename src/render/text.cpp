@@ -236,4 +236,41 @@ void TextRenderer::draw_center_fill(cairo_t* cr, double center_x, double center_
   g_object_unref(layout);
 }
 
+void TextRenderer::draw_center_glow(cairo_t* cr, double center_x, double center_y,
+                                    const std::string& text, const Color& color) const {
+  if (text.empty() || color.a <= 0.0) return;
+  PangoLayout* layout =
+      make_layout(cr, join_families(families_), size_px_, letter_spacing_, antialias_, nullptr);
+  const std::string safe = sanitize_utf8(text);
+  pango_layout_set_text(layout, safe.c_str(), -1);
+  PangoRectangle ink{};
+  pango_layout_get_pixel_extents(layout, &ink, nullptr);
+  if (ink.width <= 0 || ink.height <= 0) {
+    g_object_unref(layout);
+    return;
+  }
+
+  const double origin_x =
+      center_x - static_cast<double>(ink.width) / 2.0 - static_cast<double>(ink.x);
+  const double origin_y =
+      center_y - static_cast<double>(ink.y) - static_cast<double>(ink.height) / 2.0;
+  static const double kWidths[] = {6.0, 3.5, 1.5};
+  static const double kAlphas[] = {0.16, 0.30, 0.55};
+
+  cairo_save(cr);
+  cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
+  cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+  for (std::size_t i = 0; i < 3; ++i) {
+    cairo_new_path(cr);
+    cairo_move_to(cr, origin_x, origin_y);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_layout_path(cr, layout);
+    cairo_set_line_width(cr, kWidths[i]);
+    cairo_set_source_rgba(cr, color.r, color.g, color.b, color.a * kAlphas[i]);
+    cairo_stroke(cr);
+  }
+  cairo_restore(cr);
+  g_object_unref(layout);
+}
+
 }  // namespace pillbar

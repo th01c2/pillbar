@@ -456,17 +456,8 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
           glyph_w = icon_text_.measure(glyph);
           const double glyph_cx = r.x + glyph_w / 2.0;
           if (state.battery.charging) {
-            const double glow_r = config_->height_px * 0.50;
-            cairo_pattern_t* glow = cairo_pattern_create_radial(glyph_cx, center_y, 0.0,
-                                                                glyph_cx, center_y, glow_r);
-            const Color& g = config_->battery_charge_glow;
-            cairo_pattern_add_color_stop_rgba(glow, 0.0, g.r, g.g, g.b, g.a);
-            cairo_pattern_add_color_stop_rgba(glow, 0.55, g.r, g.g, g.b, g.a * 0.50);
-            cairo_pattern_add_color_stop_rgba(glow, 1.0, g.r, g.g, g.b, 0.0);
-            cairo_set_source(cr, glow);
-            cairo_arc(cr, glyph_cx, center_y, glow_r, 0.0, 2.0 * kPi);
-            cairo_fill(cr);
-            cairo_pattern_destroy(glow);
+            icon_text_.draw_center_glow(cr, glyph_cx, center_y, glyph,
+                                        config_->battery_charge_glow);
           }
           icon_text_.draw_center(cr, glyph_cx, center_y, glyph, color);
           if (state.battery.charging) {
