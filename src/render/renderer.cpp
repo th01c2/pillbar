@@ -161,6 +161,7 @@ std::string wifi_band_label(const WifiState& wifi) {
 }
 
 // Layout metrics (logical pixels).
+constexpr double kItemGap = 12.0;     // space between items
 constexpr double kIconGap = 6.0;      // icon -> label inside an item
 constexpr double kNameTitleGap = 8.0; // app name -> window title
 constexpr int kAppNameMaxChars = 20;
@@ -299,7 +300,7 @@ double Renderer::desired_width(const Config& config, const AppState& state, int 
     if (it == config.slots.end() || !it->second.enabled) continue;
     const double width = item_width(*this, config, state, item_for(name));
     if (width < 0.0) continue;
-    if (shown > 0) total += config.item_gap_px;
+    if (shown > 0) total += kItemGap;
     total += width;
     ++shown;
   }
@@ -328,7 +329,7 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
     const Item item = item_for(name);
     const double width = item_width(*this, config, state, item);
     if (width < 0.0) continue;
-    if (!entries.empty()) content += config.item_gap_px;
+    if (!entries.empty()) content += kItemGap;
     content += width;
     entries.push_back(Entry{item, width});
   }
@@ -356,27 +357,19 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
   double cursor_screen = std::lround((static_cast<double>(output_w) - content) / 2.0);
   const double min_screen = static_cast<double>(layout.screen_x) + config.pill_pad_px;
   if (cursor_screen < min_screen) cursor_screen = min_screen;
+  const double center_y = static_cast<double>(layout.bar_h) / 2.0;
   for (const Entry& entry : entries) {
     const Rect rect{static_cast<int>(std::lround(cursor_screen)) - layout.screen_x, 0,
                     std::max(1, static_cast<int>(std::lround(entry.width))), layout.bar_h};
     layout.items.push_back(ItemBox{entry.item, rect});
-    cursor_screen += entry.width + config.item_gap_px;
+    cursor_screen += entry.width + kItemGap;
   }
 
-  recompute_workspace_slots(layout, config, state);
-  return layout;
-}
-
-void Renderer::recompute_workspace_slots(BarLayout& layout, const Config& config,
-                                         const AppState& state) const {
-  layout.workspace_slots.clear();
-  layout.workspace_focused_index = -1;
   for (const ItemBox& box : layout.items) {
     if (box.item != Item::Workspaces) continue;
     const std::vector<WorkspaceDisplay> slots = display_workspaces(config, state);
     const int count = static_cast<int>(slots.size());
-    if (count <= 0) return;
-    const double center_y = static_cast<double>(layout.bar_h) / 2.0;
+    if (count <= 0) continue;
     const double diameter = std::min(
         20.0, std::min(static_cast<double>(box.rect.w) / count * 1.1, config.height_px * 0.62));
     for (int i = 0; i < count; ++i) {
@@ -393,8 +386,8 @@ void Renderer::recompute_workspace_slots(BarLayout& layout, const Config& config
       }
       layout.workspace_slots.push_back(slot);
     }
-    return;
   }
+  return layout;
 }
 
 std::string Renderer::ellipsize(const std::string& input, double max_width) const {

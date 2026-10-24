@@ -29,7 +29,6 @@ struct Config {
   // --- bar geometry ---
   double height_px = 30.0;      // logical pixels
   double pill_pad_px = 14.0;    // left/right padding inside the pill
-  double item_gap_px = 12.0;    // space between items
   double margin_top_frac = 0.0; // fraction of output height
   // Notch shape: flush with the screen edge, rounded only on the bottom.
   bool notch = true;
