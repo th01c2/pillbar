@@ -54,6 +54,8 @@ struct Bar {
   bool animating = false;
   TimerFd anim_timer;
 
+  int clock_anchor_x = -1;
+
   // Workspace focus indicator: a single disc that slides between numerals.
   bool ws_focus_valid = false;
   int ws_focus_id = -1;
