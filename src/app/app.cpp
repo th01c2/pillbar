@@ -47,9 +47,7 @@ int App::run() {
 }
 
 bool App::init() {
-  // Built-in defaults only: pillbar deliberately has no config file.
   config_ = Config{};
-  config_apply_default_slots(config_);
   renderer_.configure(config_);
 
   if (!display_.connect(loop_)) return false;
@@ -64,8 +62,6 @@ bool App::init() {
         if (sig == 0) break;
         if (sig == SIGTERM || sig == SIGINT) {
           loop_.stop();
-        } else if (sig == SIGHUP) {
-          reload_config();
         } else if (sig == SIGPWR) {
           if (sources_) sources_->refresh_all();
         }
@@ -139,7 +135,10 @@ void App::setup_sources() {
   sources_ = std::make_unique<SourceManager>(loop_, [this](Item items) { on_state_change(items); });
   NotifyFn notify = sources_->notify_fn();
 
-  hyprland_ = std::make_unique<HyprlandSource>(state_, notify, config_.min_workspaces, 15);
+  const bool track_window =
+      std::find(config_.order.begin(), config_.order.end(), "window") != config_.order.end();
+  hyprland_ =
+      std::make_unique<HyprlandSource>(state_, notify, config_.min_workspaces, 15, track_window);
   audio_ = std::make_unique<AudioSource>(state_, notify);
   clock_ = std::make_unique<ClockSource>(state_, notify);
   cpu_ = std::make_unique<CpuSource>(state_, notify);
@@ -197,7 +196,6 @@ void App::rebuild_bars() {
 
 void App::create_bar(Output& output) {
   auto bar = std::make_unique<Bar>();
-  bar->output = &output;
   bar->output_w = output.logical_width();
   bar->output_h = output.logical_height();
   bar->scale = output.scale();
@@ -214,7 +212,7 @@ void App::create_bar(Output& output) {
   // pointer input (set from the layout).
   Bar* raw = bar.get();
   bar->surface =
-      std::make_unique<LayerSurface>(display_, &output, kLayerTop, config_.namespace_name, true);
+      std::make_unique<LayerSurface>(display_, &output, kLayerTop, config_.namespace_name);
   // Anchor to both horizontal edges and let the compositor size the surface to
   // the full output width; this is also what makes the exclusive zone below
   // actually reserve the strip instead of being ignored.
@@ -266,7 +264,7 @@ void App::create_bar(Output& output) {
   });
 
   bar->tooltip_surface =
-      std::make_unique<LayerSurface>(display_, &output, kLayerOverlay, "pillbar-tooltip", false);
+      std::make_unique<LayerSurface>(display_, &output, kLayerOverlay, "pillbar-tooltip");
   bar->tooltip_surface->set_input_none();
   bar->tooltip_surface->set_anchors(ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
                                     ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
@@ -328,14 +326,6 @@ void App::destroy_bars() {
   }
   bars_.clear();
   tooltip_bar_ = nullptr;
-}
-
-void App::reload_config() {
-  config_ = Config{};
-  config_apply_default_slots(config_);
-  renderer_.configure(config_);
-  rebuild_bars();
-  redraw_all();
 }
 
 Bar* App::bar_for_surface(wl_surface* surface) {
@@ -541,7 +531,6 @@ void App::redraw_bar(Bar& bar, Item items) {
     bar.input_w = bar.layout.bar_w;
   }
   // The pill can change width/position, so redraw the whole (small) surface.
-  bar.canvas->damage_all();
   bar.canvas->commit();
   bar.dirty = Item::None;
 }
@@ -819,7 +808,6 @@ void App::update_tooltip(Bar& bar) {
   cairo_scale(cr, bar.scale, bar.scale);
   renderer_.draw_tooltip(cr, bar.tooltip_lines, bar.tooltip_opacity, bar.tooltip_metrics,
                          bar.tooltip_x);
-  bar.tooltip_canvas->damage_all();
   bar.tooltip_canvas->commit();
 }
 
@@ -837,7 +825,6 @@ void App::hide_tooltip(Bar& bar) {
     if (cr != nullptr) {
       cairo_scale(cr, bar.scale, bar.scale);
       renderer_.draw_tooltip(cr, {}, 0.0, TooltipMetrics{}, bar.tooltip_x);
-      bar.tooltip_canvas->damage_all();
       bar.tooltip_canvas->commit();
     }
   }

@@ -23,14 +23,13 @@ class SourceManager {
   void add(Source* source);
 
   void start_all();
-  // Re-query every source (resume, output change, config reload).
+  // Re-query every source after resume or an output change.
   void refresh_all();
-  // Immediately dispatch any pending change (initial draw).
-  void flush();
 
  private:
   void notify(Item item);
   void on_timer();
+  void flush();
 
   EventLoop& loop_;
   std::function<void(Item)> deliver_;

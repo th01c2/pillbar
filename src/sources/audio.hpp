@@ -19,7 +19,6 @@ class AudioSource : public Source {
   AudioSource(AppState& state, NotifyFn notify);
   ~AudioSource() override;
 
-  const char* name() const override { return "audio"; }
   bool start(EventLoop& loop) override;
   void refresh() override;
 

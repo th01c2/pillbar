@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
       return 0;
     }
     if (arg == "--version") {
-      std::printf("pillbar 0.1.0\n");
+      std::printf("pillbar %s\n", PILLBAR_VERSION);
       return 0;
     }
     std::fprintf(stderr, "pillbar: unknown argument '%s'\n", arg.c_str());

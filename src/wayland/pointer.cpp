@@ -11,7 +11,7 @@
 
 namespace pillbar {
 
-void Pointer::attach(wl_seat* seat, EventLoop* /*loop*/) {
+void Pointer::attach(wl_seat* seat) {
   seat_ = seat;
   if (seat_ == nullptr) return;
   wl_seat_add_listener(seat_, &seat_listener_, this);

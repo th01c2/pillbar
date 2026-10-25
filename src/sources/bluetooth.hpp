@@ -15,7 +15,6 @@ class BluetoothSource : public Source {
  public:
   BluetoothSource(AppState& state, NotifyFn notify, DbusBus& bus);
 
-  const char* name() const override { return "bluetooth"; }
   bool start(EventLoop& loop) override;
   void refresh() override;
 

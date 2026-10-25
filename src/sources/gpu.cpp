@@ -30,7 +30,6 @@ using NvmlHandleByIndexFn = int (*)(unsigned, void**);
 using NvmlTempFn = int (*)(void*, int, unsigned*);
 using NvmlUtilFn = int (*)(void*, NvmlUtilization*);
 using NvmlMemoryFn = int (*)(void*, NvmlMemory*);
-using NvmlNameFn = int (*)(void*, char*, unsigned);
 
 constexpr int kNvmlSuccess = 0;
 constexpr int kNvmlTempGpu = 0;

@@ -152,24 +152,6 @@ bool DbusBus::get_property_bool(const char* destination, const char* path, const
   return true;
 }
 
-bool DbusBus::get_property_int(const char* destination, const char* path, const char* interface,
-                               const char* member, int* out) {
-  if (bus_ == nullptr) return false;
-  sd_bus_error error{};
-  sd_bus_message* reply = nullptr;
-  const int rc =
-      sd_bus_get_property(bus_, destination, path, interface, member, &error, &reply, "i");
-  if (rc < 0) {
-    sd_bus_error_free(&error);
-    return false;
-  }
-  std::int32_t value = 0;
-  if (sd_bus_message_read(reply, "i", &value) >= 0) *out = value;
-  sd_bus_message_unref(reply);
-  sd_bus_error_free(&error);
-  return true;
-}
-
 bool DbusBus::get_property_uint(const char* destination, const char* path, const char* interface,
                                 const char* member, unsigned* out) {
   if (bus_ == nullptr) return false;

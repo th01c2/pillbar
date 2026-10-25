@@ -19,8 +19,6 @@ struct Rect {
   int y = 0;
   int w = 0;
   int h = 0;
-  bool empty() const { return w <= 0 || h <= 0; }
-  Rect union_with(const Rect& other) const;
 };
 
 // A single wl_shm (ARGB8888) buffer backed by a memfd mmap and a Cairo image
@@ -35,13 +33,8 @@ class ShmBuffer {
   bool create(wl_shm* shm, int width, int height, std::function<void()> on_release);
   wl_buffer* buffer() const { return buffer_; }
   cairo_surface_t* surface() const { return surface_; }
-  unsigned char* data() const { return static_cast<unsigned char*>(map_); }
-  int width() const { return width_; }
-  int height() const { return height_; }
-  int stride() const { return stride_; }
   bool busy() const { return busy_; }
   void mark_busy() { busy_ = true; }
-  void set_on_release(std::function<void()> cb) { on_release_ = std::move(cb); }
 
  private:
   static void ev_release(void* data, wl_buffer* buffer);
@@ -71,17 +64,10 @@ class Canvas {
 
   // Returns true when the size changed and buffers were reallocated.
   bool resize(int width, int height);
-  int width() const { return width_; }
-  int height() const { return height_; }
 
   // Begins a frame; returns the back-buffer Cairo context or nullptr when no
   // buffer is free. The context's origin is the top-left pixel.
   cairo_t* begin();
-  // Records damage in buffer pixels.
-  void damage(int x, int y, int w, int h);
-  void damage(const Rect& rect);
-  void damage_all();
-  bool has_damage() const { return !damage_.empty(); }
   // Attaches the drawn buffer, applies damage and commits the surface.
   bool commit();
 
@@ -99,8 +85,6 @@ class Canvas {
   int draw_index_ = -1;
   int width_ = 0;
   int height_ = 0;
-  bool full_damage_ = false;
-  std::vector<Rect> damage_;
   std::function<void()> on_buffer_free_;
 };
 

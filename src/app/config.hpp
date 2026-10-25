@@ -1,6 +1,5 @@
 #pragma once
 
-#include <map>
 #include <string>
 #include <vector>
 
@@ -20,10 +19,6 @@ constexpr Color rgb(unsigned int hex, double alpha = 1.0) {
                static_cast<double>((hex >> 8) & 0xFFu) / 255.0,
                static_cast<double>(hex & 0xFFu) / 255.0, alpha};
 }
-
-struct ItemSlot {
-  bool enabled = true;
-};
 
 struct Config {
   // --- bar geometry ---
@@ -124,11 +119,9 @@ struct Config {
   // than a bright green that pulls the eye.
 
   // --- items ---
-  // Window item omitted on purpose: the app name + title took the most width
-  // for the least information. Add "window" back here to restore it.
+  // Add "window" here to show the focused app class and title.
   std::vector<std::string> order{"battery",    "volume",   "wifi", "bluetooth",
                                  "workspaces", "recorder", "clock"};
-  std::map<std::string, ItemSlot> slots;
 
   // --- tooltip ---
   int tooltip_delay_ms = 250;
@@ -142,8 +135,5 @@ struct Config {
   int min_workspaces = 5;
   std::string clock_tooltip_format = "%A, %d %B %Y  %H:%M:%S";
 };
-
-// Fills default item slots matching the reference screenshot.
-void config_apply_default_slots(Config& config);
 
 } // namespace pillbar

@@ -23,9 +23,7 @@ class RecorderSource : public Source {
  public:
   RecorderSource(AppState& state, NotifyFn notify, int pulse_ms);
 
-  const char* name() const override { return "recorder"; }
   bool start(EventLoop& loop) override;
-  void refresh() override {} // nothing to poll
 
   std::vector<std::string> detail() const;
   // SIGTERM the recorder process; false when it could not be identified.

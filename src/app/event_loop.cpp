@@ -152,7 +152,6 @@ bool SignalFd::create() {
   sigaddset(&mask, SIGTERM);
   sigaddset(&mask, SIGINT);
   sigaddset(&mask, SIGPWR);
-  sigaddset(&mask, SIGHUP);
   if (::sigprocmask(SIG_BLOCK, &mask, nullptr) != 0) {
     LOG_ERR("sigprocmask: %s", std::strerror(errno));
     return false;

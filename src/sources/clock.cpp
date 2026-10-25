@@ -9,13 +9,12 @@ namespace pillbar {
 ClockSource::ClockSource(AppState& state, NotifyFn notify)
     : state_(state), notify_(std::move(notify)) {}
 
-void ClockSource::now(int* hour, int* minute, int* second) {
+void ClockSource::now(int* hour, int* minute) {
   const std::time_t t = std::time(nullptr);
   std::tm tm{};
   localtime_r(&t, &tm);
   if (hour != nullptr) *hour = tm.tm_hour;
   if (minute != nullptr) *minute = tm.tm_min;
-  if (second != nullptr) *second = tm.tm_sec;
 }
 
 bool ClockSource::start(EventLoop& loop) {
@@ -33,7 +32,7 @@ void ClockSource::refresh() {
 
 void ClockSource::update() {
   ClockState next;
-  now(&next.hour, &next.minute, nullptr);
+  now(&next.hour, &next.minute);
   LOG_DEBUG("clock: %02d:%02d", next.hour, next.minute);
   if (next == state_.clock) return;
   state_.clock = next;

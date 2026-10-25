@@ -14,12 +14,10 @@ namespace pillbar {
 class Source {
  public:
   virtual ~Source() = default;
-  virtual const char* name() const = 0;
   // Returns false when the backing service is unavailable (degrade gracefully).
   virtual bool start(EventLoop& loop) = 0;
   // Force a re-query of full state (used after suspend/resume and reconnect).
   virtual void refresh() {}
-  virtual bool active() const { return true; }
 };
 
 using NotifyFn = std::function<void(Item)>;

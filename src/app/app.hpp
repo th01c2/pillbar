@@ -32,7 +32,6 @@ namespace pillbar {
 
 // One floating pill (and its tooltip) for a single output.
 struct Bar {
-  Output* output = nullptr;
   int output_w = 0;
   int output_h = 0;
 
@@ -92,7 +91,6 @@ class App {
 
  private:
   bool init();
-  void reload_config();
   void setup_display_callbacks();
   void setup_pointer_callbacks();
   void setup_sources();

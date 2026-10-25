@@ -8,11 +8,8 @@
 , cairo
 , pango
 , systemd
-, libnl
 , libpulseaudio
 , curl
-, fontconfig
-, freetype
 }:
 
 stdenv.mkDerivation {
@@ -22,7 +19,8 @@ stdenv.mkDerivation {
     src = ./.;
     filter = path: _type:
       let base = baseNameOf (toString path);
-      in !(builtins.elem base [ "build" "build-clang" "result" ]);
+      in !(base == "build" || base == ".git" || lib.hasPrefix "build-" base
+        || lib.hasPrefix "result" base);
   };
 
   nativeBuildInputs = [
@@ -36,10 +34,7 @@ stdenv.mkDerivation {
     wayland
     cairo
     pango
-    fontconfig
-    freetype
     systemd
-    libnl
     libpulseaudio
     curl
   ];
@@ -47,11 +42,10 @@ stdenv.mkDerivation {
   cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ];
 
   meta = with lib; {
-    description = "Floating pill-shaped Wayland status bar for Hyprland";
+    description = "Notch-style Wayland status bar for Hyprland";
     longDescription = ''
-      An event-driven layer-shell status bar rendering a detached stadium
-      (pill) with battery, volume, Wi-Fi, Bluetooth, workspaces, active window
-      and a clock, plus hover tooltips.
+      An event-driven layer-shell status bar with battery, volume, Wi-Fi,
+      Bluetooth, workspaces, recorder and clock items, plus hover tooltips.
     '';
     license = licenses.mit;
     platforms = platforms.linux;

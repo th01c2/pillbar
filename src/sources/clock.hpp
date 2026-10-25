@@ -12,11 +12,10 @@ class ClockSource : public Source {
  public:
   ClockSource(AppState& state, NotifyFn notify);
 
-  const char* name() const override { return "clock"; }
   bool start(EventLoop& loop) override;
   void refresh() override;
 
-  static void now(int* hour, int* minute, int* second);
+  static void now(int* hour, int* minute);
 
  private:
   void on_fire();

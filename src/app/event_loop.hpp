@@ -61,7 +61,7 @@ class EventLoop {
   // Wayland connection after any requests generated while handling events.
   void set_post_dispatch(std::function<void()> callback) { post_dispatch_ = std::move(callback); }
 
-  // Run one non-blocking pass; used by tests and by `--once` smoke checks.
+  // Run one epoll pass with the given timeout.
   int poll_once(int timeout_ms);
 
  private:
@@ -93,7 +93,7 @@ class TimerFd {
   Fd fd_;
 };
 
-// signalfd collecting SIGTERM/SIGINT/SIGPWR for graceful shutdown and resume.
+// signalfd collecting SIGTERM/SIGINT/SIGPWR for shutdown and resume.
 class SignalFd {
  public:
   bool create();

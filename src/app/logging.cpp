@@ -35,10 +35,6 @@ LogLevel parse_level(const char* raw) {
 
 } // namespace
 
-LogLevel log_level() {
-  return static_cast<LogLevel>(g_level.load(std::memory_order_relaxed));
-}
-
 void log_set_level(LogLevel level) {
   g_level.store(static_cast<int>(level), std::memory_order_relaxed);
 }

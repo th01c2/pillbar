@@ -46,17 +46,12 @@ void BluetoothSource::rescan() {
   }
 
   BluetoothState next;
-  struct DeviceInfo {
-    BluetoothDevice device;
-    bool has_battery = false;
-  };
-  std::map<std::string, DeviceInfo> devices;
+  std::map<std::string, BluetoothDevice> devices;
 
   sd_bus_message_enter_container(reply, 'a', "{oa{sa{sv}}}");
   while (sd_bus_message_enter_container(reply, 'r', "oa{sa{sv}}") > 0) {
     const char* path = nullptr;
     sd_bus_message_read(reply, "o", &path);
-    bool is_adapter = false;
     bool is_device = false;
     std::string device_name;
     std::string device_address;
@@ -67,7 +62,7 @@ void BluetoothSource::rescan() {
     while (sd_bus_message_enter_container(reply, 'r', "sa{sv}") > 0) {
       const char* iface = nullptr;
       sd_bus_message_read(reply, "s", &iface);
-      if (std::strcmp(iface, "org.bluez.Adapter1") == 0) is_adapter = true;
+      if (std::strcmp(iface, "org.bluez.Adapter1") == 0) next.present = true;
       if (std::strcmp(iface, "org.bluez.Device1") == 0) is_device = true;
       sd_bus_message_enter_container(reply, 'a', "{sv}");
       while (sd_bus_message_enter_container(reply, 'r', "sv") > 0) {
@@ -107,21 +102,20 @@ void BluetoothSource::rescan() {
     sd_bus_message_exit_container(reply);
     sd_bus_message_exit_container(reply);
 
-    (void)is_adapter;
     if (is_device) {
-      DeviceInfo info;
-      info.device.name = device_name;
-      info.device.address = device_address;
-      info.device.connected = device_connected;
-      info.device.battery = device_battery;
-      devices[path != nullptr ? path : ""] = std::move(info);
+      BluetoothDevice device;
+      device.name = device_name;
+      device.address = device_address;
+      device.connected = device_connected;
+      device.battery = device_battery;
+      devices[path != nullptr ? path : ""] = std::move(device);
     }
   }
   sd_bus_message_exit_container(reply);
   sd_bus_message_unref(reply);
 
   for (auto& entry : devices) {
-    if (entry.second.device.connected) next.devices.push_back(entry.second.device);
+    if (entry.second.connected) next.devices.push_back(entry.second);
   }
 
   if (!(next == state_.bluetooth)) {

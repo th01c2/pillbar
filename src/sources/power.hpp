@@ -18,7 +18,6 @@ class PowerSource : public Source {
   PowerSource(AppState& state, NotifyFn notify);
   ~PowerSource() override;
 
-  const char* name() const override { return "power"; }
   bool start(EventLoop& loop) override;
   void refresh() override;
 
@@ -32,7 +31,6 @@ class PowerSource : public Source {
 
   AppState& state_;
   NotifyFn notify_;
-  EventLoop* loop_ = nullptr;
   udev* udev_ = nullptr;
   udev_monitor* monitor_ = nullptr;
   int monitor_fd_ = -1;

@@ -9,7 +9,6 @@ namespace pillbar {
 
 enum class LogLevel : int { Error = 0, Warn = 1, Info = 2, Debug = 3 };
 
-LogLevel log_level();
 void log_set_level(LogLevel level);
 
 void log_emit(LogLevel level, const char* file, int line, const char* fmt, ...)

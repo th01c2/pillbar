@@ -12,7 +12,6 @@ class VpnSource : public Source {
  public:
   VpnSource(AppState& state, NotifyFn notify, DbusBus& bus, std::string unit);
 
-  const char* name() const override { return "vpn"; }
   bool start(EventLoop& loop) override;
   void refresh() override;
 

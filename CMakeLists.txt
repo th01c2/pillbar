@@ -22,7 +22,6 @@ pkg_check_modules(SYSTEMD REQUIRED IMPORTED_TARGET libsystemd)
 pkg_check_modules(UDEV REQUIRED IMPORTED_TARGET libudev)
 pkg_check_modules(PULSE REQUIRED IMPORTED_TARGET libpulse)
 pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
-pkg_check_modules(FONTCONFIG REQUIRED IMPORTED_TARGET fontconfig)
 
 find_program(WAYLAND_SCANNER NAMES wayland-scanner REQUIRED)
 find_program(PILLBAR_SED NAMES sed REQUIRED)
@@ -67,7 +66,6 @@ set(PILLBAR_SOURCES
   src/main.cpp
   src/app/app.cpp
   src/app/logging.cpp
-  src/app/config.cpp
   src/app/event_loop.cpp
   src/wayland/display.cpp
   src/wayland/shm.cpp
@@ -100,6 +98,7 @@ set(PILLBAR_SOURCES
 add_executable(pillbar ${PILLBAR_SOURCES})
 
 target_include_directories(pillbar PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_compile_definitions(pillbar PRIVATE PILLBAR_VERSION="${PROJECT_VERSION}")
 
 target_compile_options(pillbar PRIVATE -Wall -Wextra -Wpedantic)
 
@@ -113,7 +112,6 @@ target_link_libraries(pillbar PRIVATE
   PkgConfig::UDEV
   PkgConfig::PULSE
   PkgConfig::CURL
-  PkgConfig::FONTCONFIG
   ${CMAKE_DL_LIBS}
   m
 )

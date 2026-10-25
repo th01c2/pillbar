@@ -37,8 +37,6 @@ class DbusBus {
                                 const char* member, std::string* out);
   bool get_property_bool(const char* destination, const char* path, const char* interface,
                          const char* member, bool* out);
-  bool get_property_int(const char* destination, const char* path, const char* interface,
-                        const char* member, int* out);
   bool get_property_uint(const char* destination, const char* path, const char* interface,
                          const char* member, unsigned* out);
   bool get_property_byte(const char* destination, const char* path, const char* interface,

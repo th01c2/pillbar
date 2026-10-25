@@ -67,7 +67,7 @@ void WaylandDisplay::handle_global(uint32_t name, const char* interface, uint32_
         wl_registry_bind(registry_, name, &wl_seat_interface, std::min(version, 7u)));
     if (pointer_ == nullptr) {
       pointer_ = std::make_unique<Pointer>();
-      pointer_->attach(seat_, loop_);
+      pointer_->attach(seat_);
     }
   } else if (iface == zwlr_layer_shell_v1_interface.name) {
     layer_shell_ = static_cast<zwlr_layer_shell_v1*>(
@@ -94,8 +94,6 @@ void WaylandDisplay::handle_global(uint32_t name, const char* interface, uint32_
 void WaylandDisplay::handle_global_remove(uint32_t name) {
   for (auto it = outputs_.begin(); it != outputs_.end(); ++it) {
     if ((*it)->registry_name() == name) {
-      Output& removed = **it;
-      if (on_output_removed) on_output_removed(removed);
       outputs_.erase(it);
       if (on_outputs_changed) on_outputs_changed();
       return;
@@ -127,7 +125,7 @@ bool WaylandDisplay::connect(EventLoop& loop) {
   }
   if (pointer_ == nullptr) {
     pointer_ = std::make_unique<Pointer>();
-    pointer_->attach(seat_, loop_);
+    pointer_->attach(seat_);
   }
   loop_->add(wl_display_get_fd(display_), EPOLLIN, [this](std::uint32_t events) {
     if ((events & EPOLLIN) != 0) {
@@ -140,8 +138,6 @@ bool WaylandDisplay::connect(EventLoop& loop) {
       flush();
     }
   });
-  ready_ = true;
-  if (on_ready) on_ready();
   return true;
 }
 

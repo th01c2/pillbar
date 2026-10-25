@@ -44,7 +44,6 @@ class Renderer {
   TooltipMetrics measure_tooltip(const std::vector<std::string>& lines) const;
 
   void set_scale(double scale) { scale_ = scale > 0.0 ? scale : 1.0; }
-  double scale() const { return scale_; }
 
   // Ellipsizes `text` so it fits within `max_width` logical pixels.
   std::string ellipsize(const std::string& text, double max_width) const;

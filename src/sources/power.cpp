@@ -33,7 +33,6 @@ PowerSource::~PowerSource() {
 }
 
 bool PowerSource::start(EventLoop& loop) {
-  loop_ = &loop;
   udev_ = udev_new();
   if (udev_ == nullptr) {
     LOG_WARN("udev_new failed");

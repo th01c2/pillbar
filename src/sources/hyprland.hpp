@@ -13,10 +13,10 @@ namespace pillbar {
 // for initial state queries and `dispatch` commands. hyprctl is never polled.
 class HyprlandSource : public Source {
  public:
-  HyprlandSource(AppState& state, NotifyFn notify, int min_workspaces, int max_workspaces);
+  HyprlandSource(AppState& state, NotifyFn notify, int min_workspaces, int max_workspaces,
+                 bool track_window);
   ~HyprlandSource() override;
 
-  const char* name() const override { return "hyprland"; }
   bool start(EventLoop& loop) override;
   void refresh() override;
 
@@ -47,6 +47,7 @@ class HyprlandSource : public Source {
   NotifyFn notify_;
   int min_workspaces_ = 5;
   int max_workspaces_ = 10;
+  bool track_window_ = false;
   EventLoop* loop_ = nullptr;
   std::string event_path_;
   std::string command_path_;

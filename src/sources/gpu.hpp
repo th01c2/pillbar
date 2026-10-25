@@ -19,7 +19,6 @@ class GpuSource : public Source {
   GpuSource(AppState& state, NotifyFn notify);
   ~GpuSource() override;
 
-  const char* name() const override { return "gpu"; }
   bool start(EventLoop& loop) override;
   void refresh() override;
 

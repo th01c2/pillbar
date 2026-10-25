@@ -35,12 +35,9 @@ class WaylandDisplay {
 
   bool connect(EventLoop& loop);
 
-  wl_display* display() const { return display_; }
   wl_compositor* compositor() const { return compositor_; }
   wl_shm* shm() const { return shm_; }
-  wl_seat* seat() const { return seat_; }
   zwlr_layer_shell_v1* layer_shell() const { return layer_shell_; }
-  zxdg_output_manager_v1* xdg_output_manager() const { return xdg_output_manager_; }
   wp_fractional_scale_manager_v1* fractional_scale_manager() const {
     return fractional_scale_manager_;
   }
@@ -56,9 +53,6 @@ class WaylandDisplay {
   void dispatch();
 
   // Fired after the registry is fully populated the first time.
-  std::function<void()> on_ready;
-  std::function<void(Output&)> on_output_added;
-  std::function<void(Output&)> on_output_removed;
   std::function<void()> on_outputs_changed;
 
   void roundtrip();
@@ -84,7 +78,6 @@ class WaylandDisplay {
   wp_viewporter* viewporter_ = nullptr;
   std::vector<std::unique_ptr<Output>> outputs_;
   std::unique_ptr<Pointer> pointer_;
-  bool ready_ = false;
   bool need_out_ = false;
   bool protocol_error_ = false;
 };

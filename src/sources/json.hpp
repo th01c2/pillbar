@@ -22,13 +22,11 @@ class JsonValue {
   std::vector<std::string> object_keys;
   std::vector<JsonValue> object_values;
 
-  bool is_null() const { return type == Type::Null; }
   bool is_object() const { return type == Type::Object; }
   bool is_array() const { return type == Type::Array; }
 
   const JsonValue* find(const std::string& key) const;
   std::string as_string(const std::string& fallback = "") const;
-  double as_number(double fallback = 0.0) const;
   int as_int(int fallback = 0) const;
 };
 

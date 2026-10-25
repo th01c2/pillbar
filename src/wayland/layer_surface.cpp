@@ -9,7 +9,7 @@
 namespace pillbar {
 
 LayerSurface::LayerSurface(WaylandDisplay& display, Output* output, std::uint32_t layer,
-                           std::string ns, bool /*interactive*/)
+                           std::string ns)
     : display_(display) {
   surface_ = wl_compositor_create_surface(display.compositor());
   layer_ = zwlr_layer_shell_v1_get_layer_surface(display.layer_shell(), surface_,
@@ -85,23 +85,19 @@ void LayerSurface::commit() {
 void LayerSurface::ev_configure(void* data, zwlr_layer_surface_v1* ls, std::uint32_t serial,
                                 std::uint32_t width, std::uint32_t height) {
   auto* self = static_cast<LayerSurface*>(data);
-  self->width_ = width;
-  self->height_ = height;
   zwlr_layer_surface_v1_ack_configure(ls, serial);
   if (self->on_configure) self->on_configure(width, height);
 }
 
 void LayerSurface::ev_closed(void* data, zwlr_layer_surface_v1*) {
   auto* self = static_cast<LayerSurface*>(data);
-  self->closed_ = true;
   if (self->on_closed) self->on_closed();
 }
 
 void LayerSurface::ev_preferred_scale(void* data, wp_fractional_scale_v1*, std::uint32_t scale) {
   auto* self = static_cast<LayerSurface*>(data);
   const double value = static_cast<double>(scale) / 120.0;
-  self->scale_ = value > 0.0 ? value : 1.0;
-  if (self->on_scale) self->on_scale(self->scale_);
+  if (self->on_scale) self->on_scale(value > 0.0 ? value : 1.0);
 }
 
 } // namespace pillbar

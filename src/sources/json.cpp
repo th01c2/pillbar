@@ -16,10 +16,6 @@ std::string JsonValue::as_string(const std::string& fallback) const {
   return type == Type::String ? string_value : fallback;
 }
 
-double JsonValue::as_number(double fallback) const {
-  return type == Type::Number ? number_value : fallback;
-}
-
 int JsonValue::as_int(int fallback) const {
   return type == Type::Number ? static_cast<int>(number_value) : fallback;
 }

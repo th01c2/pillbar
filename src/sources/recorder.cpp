@@ -36,8 +36,6 @@ bool is_recorder_name(const std::string& name) {
 std::string read_comm(int pid) {
   std::string text;
   if (!sysfs::read_string("/proc/" + std::to_string(pid) + "/comm", &text)) return {};
-  while (!text.empty() && (text.back() == '\n' || text.back() == '\r'))
-    text.pop_back();
   return text;
 }
 

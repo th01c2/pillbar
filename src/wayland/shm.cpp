@@ -7,23 +7,12 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include <algorithm>
 #include <cerrno>
 #include <cstring>
 
 #include "app/logging.hpp"
 
 namespace pillbar {
-
-Rect Rect::union_with(const Rect& other) const {
-  if (empty()) return other;
-  if (other.empty()) return *this;
-  const int x0 = std::min(x, other.x);
-  const int y0 = std::min(y, other.y);
-  const int x1 = std::max(x + w, other.x + other.w);
-  const int y1 = std::max(y + h, other.y + other.h);
-  return Rect{x0, y0, x1 - x0, y1 - y0};
-}
 
 const wl_buffer_listener ShmBuffer::listener_ = {&ShmBuffer::ev_release};
 
@@ -106,15 +95,12 @@ bool Canvas::resize(int width, int height) {
   height_ = height;
   for (int i = 0; i < 2; ++i) {
     buffers_[i] = std::make_unique<ShmBuffer>();
-    buffers_[i]->set_on_release(on_buffer_free_);
     if (!buffers_[i]->create(shm_, width_, height_, [this]() {
           if (on_buffer_free_) on_buffer_free_();
         })) {
       LOG_ERR("failed to allocate shm buffer %d (%dx%d)", i, width_, height_);
     }
   }
-  full_damage_ = true;
-  damage_.clear();
   return true;
 }
 
@@ -130,19 +116,6 @@ cairo_t* Canvas::begin() {
   return ctx_;
 }
 
-void Canvas::damage(int x, int y, int w, int h) {
-  if (w <= 0 || h <= 0) return;
-  damage_.push_back(Rect{x, y, w, h});
-}
-
-void Canvas::damage(const Rect& rect) {
-  if (!rect.empty()) damage_.push_back(rect);
-}
-
-void Canvas::damage_all() {
-  full_damage_ = true;
-}
-
 bool Canvas::commit() {
   if (draw_index_ < 0) return false;
   ShmBuffer* buffer = buffers_[draw_index_].get();
@@ -153,18 +126,10 @@ bool Canvas::commit() {
   }
   cairo_surface_flush(buffer->surface());
   wl_surface_attach(surface_, buffer->buffer(), 0, 0);
-  if (full_damage_) {
-    wl_surface_damage_buffer(surface_, 0, 0, width_, height_);
-  } else {
-    for (const Rect& rect : damage_) {
-      wl_surface_damage_buffer(surface_, rect.x, rect.y, rect.w, rect.h);
-    }
-  }
+  wl_surface_damage_buffer(surface_, 0, 0, width_, height_);
   wl_surface_commit(surface_);
   buffer->mark_busy();
   draw_index_ = -1;
-  full_damage_ = false;
-  damage_.clear();
   return true;
 }
 

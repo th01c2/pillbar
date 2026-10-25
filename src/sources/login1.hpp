@@ -13,9 +13,7 @@ class Login1Source : public Source {
  public:
   Login1Source(DbusBus& bus, std::function<void()> on_resume);
 
-  const char* name() const override { return "login1"; }
   bool start(EventLoop& loop) override;
-  void refresh() override {}
 
  private:
   static int on_signal(sd_bus_message* message, void* userdata, sd_bus_error* error);

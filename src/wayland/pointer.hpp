@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <functional>
 
-#include "app/event_loop.hpp"
-
 struct wl_compositor;
 struct wl_shm;
 struct wl_cursor;
@@ -23,7 +21,7 @@ class Pointer {
   Pointer(const Pointer&) = delete;
   Pointer& operator=(const Pointer&) = delete;
 
-  void attach(wl_seat* seat, EventLoop* loop);
+  void attach(wl_seat* seat);
   // Creates the cursor surface and prepares themed cursors. Required before
   // set_cursor() does anything.
   void configure(wl_compositor* compositor, wl_shm* shm, int size_px = 24);
@@ -36,8 +34,6 @@ class Pointer {
   std::function<void(wl_surface*)> on_leave;
   std::function<void(wl_surface*, std::uint32_t button, double, double)> on_button;
   std::function<void(wl_surface*, int steps, double, double)> on_scroll;
-
-  wl_surface* focus() const { return focus_; }
 
  private:
   static void ev_capabilities(void* data, wl_seat* seat, std::uint32_t capabilities);

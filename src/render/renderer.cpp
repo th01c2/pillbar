@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <string>
 
-#include "app/logging.hpp"
 #include "render/glyphs.hpp"
 
 namespace pillbar {
@@ -298,8 +297,6 @@ double Renderer::desired_width(const Config& config, const AppState& state, int 
   double total = config.pill_pad_px * 2.0;
   int shown = 0;
   for (const std::string& name : config.order) {
-    const auto it = config.slots.find(name);
-    if (it == config.slots.end() || !it->second.enabled) continue;
     const double width = item_width(*this, config, state, item_for(name));
     if (width < 0.0) continue;
     if (shown > 0) total += config.item_gap_px;
@@ -326,8 +323,6 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
   std::vector<Entry> entries;
   double content = 0.0;
   for (const std::string& name : config.order) {
-    const auto it = config.slots.find(name);
-    if (it == config.slots.end() || !it->second.enabled) continue;
     const Item item = item_for(name);
     const double width = item_width(*this, config, state, item);
     if (width < 0.0) continue;
@@ -346,7 +341,6 @@ BarLayout Renderer::compute_layout(const Config& config, const AppState& state, 
       const double take = std::min(deficit, entry.width);
       entry.width -= take;
       content -= take;
-      deficit -= take;
       break;
     }
   }

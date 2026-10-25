@@ -17,7 +17,6 @@ class CpuSource : public Source {
  public:
   CpuSource(AppState& state, NotifyFn notify);
 
-  const char* name() const override { return "cpu"; }
   bool start(EventLoop& loop) override;
   void refresh() override;
 

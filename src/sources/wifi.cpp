@@ -148,7 +148,6 @@ void WifiSource::rescan() {
   }
 
   if (!wifi_path.empty()) {
-    device_path_ = wifi_path;
     next.present = true;
     bus_.get_property_string("org.freedesktop.NetworkManager", wifi_path.c_str(),
                              "org.freedesktop.NetworkManager.Device", "Interface", &next.ifname);
@@ -160,8 +159,6 @@ void WifiSource::rescan() {
                                   "ActiveAccessPoint", &ap_path);
     const bool connected = !ap_path.empty() && ap_path != "/";
     next.connected = connected;
-    ap_path_ = ap_path;
-
     if (connected) {
       std::string ssid;
       if (bus_.get_property_bytes("org.freedesktop.NetworkManager", ap_path.c_str(),

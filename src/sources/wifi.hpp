@@ -19,7 +19,6 @@ class WifiSource : public Source {
  public:
   WifiSource(AppState& state, NotifyFn notify, DbusBus& bus);
 
-  const char* name() const override { return "wifi"; }
   bool start(EventLoop& loop) override;
   void refresh() override;
 
@@ -37,8 +36,6 @@ class WifiSource : public Source {
   NotifyFn notify_;
   DbusBus& bus_;
   PublicIpLookup public_ip_;
-  std::string device_path_;
-  std::string ap_path_;
   std::string ifname_;
   mutable long long last_rx_bytes_ = -1;
   mutable long long last_tx_bytes_ = -1;

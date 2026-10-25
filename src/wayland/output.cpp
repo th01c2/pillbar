@@ -19,7 +19,6 @@ void Output::bind(wl_output* output) {
 
 void Output::setup(zxdg_output_manager_v1* manager) {
   if (manager == nullptr || wl_ == nullptr) {
-    xdg_done_ = true;
     return;
   }
   xdg_ = zxdg_output_manager_v1_get_xdg_output(manager, wl_);
@@ -33,15 +32,12 @@ int Output::fallback_height() const {
   return scale_ > 0 ? phys_h_ / scale_ : phys_h_;
 }
 
-void Output::ev_geometry(void* data, wl_output*, int32_t x, int32_t y, int32_t physical_width,
+void Output::ev_geometry(void* data, wl_output*, int32_t, int32_t, int32_t physical_width,
                          int32_t physical_height, int32_t, const char*, const char*,
-                         int32_t transform) {
+                         int32_t) {
   auto* self = static_cast<Output*>(data);
-  self->logical_x_ = x;
-  self->logical_y_ = y;
   self->phys_w_ = physical_width;
   self->phys_h_ = physical_height;
-  self->transform_ = transform;
   self->have_geometry_ = true;
   if (self->on_changed) self->on_changed();
 }
@@ -66,10 +62,7 @@ void Output::ev_name(void* data, wl_output*, const char* name) {
   self->name_ = name != nullptr ? name : "";
 }
 
-void Output::ev_description(void* data, wl_output*, const char* description) {
-  auto* self = static_cast<Output*>(data);
-  self->description_ = description != nullptr ? description : "";
-}
+void Output::ev_description(void*, wl_output*, const char*) {}
 
 void Output::ev_done(void* data, wl_output*) {
   auto* self = static_cast<Output*>(data);
@@ -77,12 +70,7 @@ void Output::ev_done(void* data, wl_output*) {
   if (self->ready() && self->on_done) self->on_done();
 }
 
-void Output::ev_xdg_logical_position(void* data, zxdg_output_v1*, int32_t x, int32_t y) {
-  auto* self = static_cast<Output*>(data);
-  self->logical_x_ = x;
-  self->logical_y_ = y;
-  if (self->on_changed) self->on_changed();
-}
+void Output::ev_xdg_logical_position(void*, zxdg_output_v1*, int32_t, int32_t) {}
 
 void Output::ev_xdg_logical_size(void* data, zxdg_output_v1*, int32_t width, int32_t height) {
   auto* self = static_cast<Output*>(data);
@@ -91,21 +79,14 @@ void Output::ev_xdg_logical_size(void* data, zxdg_output_v1*, int32_t width, int
   if (self->on_changed) self->on_changed();
 }
 
-void Output::ev_xdg_done(void* data, zxdg_output_v1*) {
-  auto* self = static_cast<Output*>(data);
-  self->xdg_done_ = true;
-  if (self->ready() && self->on_done) self->on_done();
-}
+void Output::ev_xdg_done(void*, zxdg_output_v1*) {}
 
 void Output::ev_xdg_name(void* data, zxdg_output_v1*, const char* name) {
   auto* self = static_cast<Output*>(data);
   if (name != nullptr && *name != '\0') self->name_ = name;
 }
 
-void Output::ev_xdg_description(void* data, zxdg_output_v1*, const char* description) {
-  auto* self = static_cast<Output*>(data);
-  if (description != nullptr && *description != '\0') self->description_ = description;
-}
+void Output::ev_xdg_description(void*, zxdg_output_v1*, const char*) {}
 
 const wl_output_listener Output::output_listener_ = {
     &Output::ev_geometry, &Output::ev_mode, &Output::ev_done,

@@ -31,11 +31,8 @@ class Output {
 
   int logical_width() const { return logical_w_ > 0 ? logical_w_ : fallback_width(); }
   int logical_height() const { return logical_h_ > 0 ? logical_h_ : fallback_height(); }
-  int logical_x() const { return logical_x_; }
-  int logical_y() const { return logical_y_; }
   double scale() const { return static_cast<double>(scale_ > 0 ? scale_ : 1); }
   const std::string& name() const { return name_; }
-  const std::string& description() const { return description_; }
   // Readiness is synced on wl_output.done. xdg-output's own done event is
   // deprecated as of v3 and is not sent by all compositors (e.g. Hyprland),
   // so it must not gate readiness.
@@ -72,21 +69,16 @@ class Output {
 
   int phys_w_ = 0;
   int phys_h_ = 0;
-  int logical_x_ = 0;
-  int logical_y_ = 0;
   int logical_w_ = 0;
   int logical_h_ = 0;
-  int transform_ = 0;
   int scale_ = 1;
 
   bool have_geometry_ = false;
   bool have_mode_ = false;
   bool have_scale_ = false;
   bool have_done_ = false;
-  bool xdg_done_ = false;
 
   std::string name_;
-  std::string description_;
 };
 
 } // namespace pillbar

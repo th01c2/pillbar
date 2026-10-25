@@ -45,9 +45,9 @@ int connect_unix(const std::string& path, bool nonblocking) {
 } // namespace
 
 HyprlandSource::HyprlandSource(AppState& state, NotifyFn notify, int min_workspaces,
-                               int max_workspaces)
+                               int max_workspaces, bool track_window)
     : state_(state), notify_(std::move(notify)), min_workspaces_(min_workspaces),
-      max_workspaces_(max_workspaces) {}
+      max_workspaces_(max_workspaces), track_window_(track_window) {}
 
 HyprlandSource::~HyprlandSource() {
   close_event();
@@ -299,12 +299,12 @@ void HyprlandSource::requery() {
     if (notify_) notify_(Item::Workspaces);
   }
 
-  update_window();
+  if (track_window_) update_window();
 }
 
 // Query only j/activewindow; used for events that cannot change workspaces.
 void HyprlandSource::requery_window() {
-  if (command_path_.empty()) return;
+  if (!track_window_ || command_path_.empty()) return;
   update_window();
 }
 

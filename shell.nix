@@ -5,17 +5,13 @@ pkgs.mkShell {
     ninja
     pkg-config
     wayland-scanner
-    wayland-protocols
   ];
 
   buildInputs = with pkgs; [
     wayland
     cairo
     pango
-    fontconfig
-    freetype
     systemd
-    libnl
     libpulseaudio
     curl
   ];
