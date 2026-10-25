@@ -163,6 +163,7 @@ struct AppState {
   CpuState cpu;
   GpuState gpu;
   RecorderState recorder;
+  bool vpn_up = false;
 };
 
 } // namespace pillbar

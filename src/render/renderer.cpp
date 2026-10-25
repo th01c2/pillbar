@@ -285,6 +285,9 @@ void Renderer::configure(const Config& config) {
   icon_text_.configure(config.icon_fonts, std::max(1.0, config.height_px * config.icon_size_frac),
                        0.0,
                        /*antialias=*/true);
+  vpn_badge_text_.configure(config.icon_fonts,
+                            std::max(1.0, config.height_px * config.vpn_badge_size_frac), 0.0,
+                            /*antialias=*/true);
   clock_text_.configure(config.fonts, config.clock_font_size_px, config.letter_spacing,
                         config.smooth_text);
   tooltip_text_.configure(config.fonts, config.tooltip_font_size_px, config.letter_spacing,
@@ -535,12 +538,21 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
       const Color icon_color =
           (state.wifi.wired || state.wifi.connected) ? config_->text : config_->dim;
       const std::string label = wifi_band_label(state.wifi);
+      double glyph_center_x = r.x + r.w / 2.0;
       if (label.empty()) {
-        icon_text_.draw_center(cr, r.x + r.w / 2.0, center_y, glyph, icon_color);
+        icon_text_.draw_center(cr, glyph_center_x, center_y, glyph, icon_color);
       } else {
         const double glyph_w = icon_text_.measure(glyph);
-        icon_text_.draw_center(cr, r.x + glyph_w / 2.0, center_y, glyph, icon_color);
+        glyph_center_x = r.x + glyph_w / 2.0;
+        icon_text_.draw_center(cr, glyph_center_x, center_y, glyph, icon_color);
         text_.draw_left(cr, r.x + glyph_w + kIconGap, center_y, label, config_->text);
+      }
+      if (state.vpn_up && !config_->vpn_badge_glyph.empty()) {
+        const double glyph_w = std::max(1.0, icon_text_.measure(glyph));
+        const double badge_x = glyph_center_x + glyph_w * 0.34;
+        const double badge_y = center_y + layout.bar_h * 0.19;
+        vpn_badge_text_.draw_center(cr, badge_x, badge_y, config_->vpn_badge_glyph,
+                                    config_->vpn_badge_color);
       }
       break;
     }

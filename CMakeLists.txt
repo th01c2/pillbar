@@ -86,6 +86,7 @@ set(PILLBAR_SOURCES
   src/sources/audio.cpp
   src/sources/wifi.cpp
   src/sources/bluetooth.cpp
+  src/sources/vpn.cpp
   src/sources/clock.cpp
   src/sources/stats.cpp
   src/sources/gpu.cpp

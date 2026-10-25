@@ -55,6 +55,7 @@ class Renderer {
   const Config* config_ = nullptr;
   TextRenderer text_;
   TextRenderer icon_text_;
+  TextRenderer vpn_badge_text_;
   TextRenderer clock_text_;
   TextRenderer tooltip_text_;
   Color active_bar_color_{};

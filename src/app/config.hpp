@@ -79,6 +79,9 @@ struct Config {
   std::vector<std::string> wifi_levels{"\U000F091F", "\U000F0922", "\U000F0925", "\U000F0928"};
   std::string wifi_off = "\U000F092F";
   std::string wifi_wired = "\U000F0200";
+  std::string vpn_badge_glyph = "\U000F0306";
+  std::string vpn_unit = "awg-wg0.service";
+  double vpn_badge_size_frac = 0.36;
   std::string window_glyph = "\uEA85";
   // Screen-recorder indicator (nf-cod-record U+EBA7; U+EBFA and U+F044A also
   // exist). While recording it pulses from dark red to bright red and back.
@@ -113,6 +116,7 @@ struct Config {
   int battery_low_percent = 20;
   Color window_icon = rgb(0x6f7fd8);
   Color speaker = rgb(0xe6e6e6);
+  Color vpn_badge_color = rgb(0x61d68a);
   Color recorder_color = rgb(0xff3b30);
   Color recorder_color_dim = rgb(0x7a0d08);
   // Matches the focused-workspace accent, so a healthy tunnel is calm rather
