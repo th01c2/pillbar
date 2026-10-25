@@ -17,6 +17,7 @@ pkgs.mkShell {
     systemd
     libnl
     libpulseaudio
+    curl
   ];
 
   shellHook = ''

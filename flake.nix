@@ -43,6 +43,7 @@
             systemd
             libnl
             libpulseaudio
+            curl
           ];
 
           shellHook = ''

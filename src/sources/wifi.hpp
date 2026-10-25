@@ -6,6 +6,7 @@
 
 #include "model/state.hpp"
 #include "sources/dbus.hpp"
+#include "sources/public_ip.hpp"
 #include "sources/source.hpp"
 
 namespace pillbar {
@@ -24,6 +25,8 @@ class WifiSource : public Source {
 
   // Lines for the tooltip; reads the IP address on demand.
   std::vector<std::string> detail() const;
+  void request_public_ip() { public_ip_.request(); }
+  void invalidate_public_ip() { public_ip_.invalidate(); }
 
  private:
   static int on_signal(sd_bus_message* message, void* userdata, sd_bus_error* error);
@@ -33,6 +36,7 @@ class WifiSource : public Source {
   AppState& state_;
   NotifyFn notify_;
   DbusBus& bus_;
+  PublicIpLookup public_ip_;
   std::string device_path_;
   std::string ap_path_;
   std::string ifname_;

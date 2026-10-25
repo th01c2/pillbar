@@ -21,6 +21,7 @@ pkg_check_modules(PANGO REQUIRED IMPORTED_TARGET pangocairo)
 pkg_check_modules(SYSTEMD REQUIRED IMPORTED_TARGET libsystemd)
 pkg_check_modules(UDEV REQUIRED IMPORTED_TARGET libudev)
 pkg_check_modules(PULSE REQUIRED IMPORTED_TARGET libpulse)
+pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
 pkg_check_modules(FONTCONFIG REQUIRED IMPORTED_TARGET fontconfig)
 
 find_program(WAYLAND_SCANNER NAMES wayland-scanner REQUIRED)
@@ -87,6 +88,7 @@ set(PILLBAR_SOURCES
   src/sources/wifi.cpp
   src/sources/bluetooth.cpp
   src/sources/vpn.cpp
+  src/sources/public_ip.cpp
   src/sources/clock.cpp
   src/sources/stats.cpp
   src/sources/gpu.cpp
@@ -110,6 +112,7 @@ target_link_libraries(pillbar PRIVATE
   PkgConfig::SYSTEMD
   PkgConfig::UDEV
   PkgConfig::PULSE
+  PkgConfig::CURL
   PkgConfig::FONTCONFIG
   ${CMAKE_DL_LIBS}
   m

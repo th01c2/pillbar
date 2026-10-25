@@ -79,7 +79,7 @@ std::string format_rate(double bits_per_sec) {
 } // namespace
 
 WifiSource::WifiSource(AppState& state, NotifyFn notify, DbusBus& bus)
-    : state_(state), notify_(std::move(notify)), bus_(bus) {}
+    : state_(state), notify_(notify), bus_(bus), public_ip_(std::move(notify)) {}
 
 int WifiSource::on_signal(sd_bus_message* message, void* userdata, sd_bus_error*) {
   auto* self = static_cast<WifiSource*>(userdata);
@@ -89,7 +89,6 @@ int WifiSource::on_signal(sd_bus_message* message, void* userdata, sd_bus_error*
 }
 
 bool WifiSource::start(EventLoop& loop) {
-  (void)loop;
   if (!bus_.valid()) return false;
   bus_.add_match("type='signal',sender='org.freedesktop.NetworkManager',"
                  "interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'",
@@ -97,6 +96,7 @@ bool WifiSource::start(EventLoop& loop) {
   bus_.add_match("type='signal',sender='org.freedesktop.NetworkManager',"
                  "interface='org.freedesktop.NetworkManager'",
                  [this](sd_bus_message* m) { return on_signal(m, this, nullptr); });
+  public_ip_.start(loop);
   rescan();
   return state_.wifi.present;
 }
@@ -207,6 +207,10 @@ std::vector<std::string> WifiSource::detail() const {
   sample_rates();
   std::vector<std::string> lines;
   const WifiState& wifi = state_.wifi;
+  const auto append_public_ip = [&]() {
+    const std::vector<std::string> public_lines = public_ip_.detail();
+    lines.insert(lines.end(), public_lines.begin(), public_lines.end());
+  };
   if (wifi.wired) {
     lines.push_back("Ethernet: " +
                     (wifi.wired_ifname.empty() ? std::string("connected") : wifi.wired_ifname));
@@ -215,6 +219,7 @@ std::vector<std::string> WifiSource::detail() const {
     if (!wifi.wired) lines.push_back("Wi-Fi: no device");
     lines.push_back("Down: " + format_rate(rx_rate_bps_));
     lines.push_back("Up: " + format_rate(tx_rate_bps_));
+    append_public_ip();
     return lines;
   }
   if (!wifi.connected) {
@@ -222,6 +227,7 @@ std::vector<std::string> WifiSource::detail() const {
     lines.push_back("Interface: " + wifi.ifname);
     lines.push_back("Down: " + format_rate(rx_rate_bps_));
     lines.push_back("Up: " + format_rate(tx_rate_bps_));
+    append_public_ip();
     return lines;
   }
   lines.push_back("SSID: " + (wifi.ssid.empty() ? std::string("(hidden)") : wifi.ssid));
@@ -238,6 +244,7 @@ std::vector<std::string> WifiSource::detail() const {
   lines.push_back("IP: " + (ip.empty() ? std::string("none") : ip));
   lines.push_back("Down: " + format_rate(rx_rate_bps_));
   lines.push_back("Up: " + format_rate(tx_rate_bps_));
+  append_public_ip();
   return lines;
 }
 

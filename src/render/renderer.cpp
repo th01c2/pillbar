@@ -547,12 +547,13 @@ void Renderer::draw_bar(cairo_t* cr, const BarLayout& layout, const AppState& st
         icon_text_.draw_center(cr, glyph_center_x, center_y, glyph, icon_color);
         text_.draw_left(cr, r.x + glyph_w + kIconGap, center_y, label, config_->text);
       }
-      if (state.vpn_up && !config_->vpn_badge_glyph.empty()) {
+      if (!config_->vpn_badge_glyph.empty()) {
         const double glyph_w = std::max(1.0, icon_text_.measure(glyph));
         const double badge_x = glyph_center_x + glyph_w * 0.34;
         const double badge_y = center_y + layout.bar_h * 0.19;
-        vpn_badge_text_.draw_center(cr, badge_x, badge_y, config_->vpn_badge_glyph,
-                                    config_->vpn_badge_color);
+        const Color& badge_color =
+            state.vpn_up ? config_->vpn_badge_color : config_->vpn_badge_color_down;
+        vpn_badge_text_.draw_center(cr, badge_x, badge_y, config_->vpn_badge_glyph, badge_color);
       }
       break;
     }

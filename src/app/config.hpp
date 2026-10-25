@@ -117,6 +117,7 @@ struct Config {
   Color window_icon = rgb(0x6f7fd8);
   Color speaker = rgb(0xe6e6e6);
   Color vpn_badge_color = rgb(0x61d68a);
+  Color vpn_badge_color_down = rgb(0xff5555);
   Color recorder_color = rgb(0xff3b30);
   Color recorder_color_dim = rgb(0x7a0d08);
   // Matches the focused-workspace accent, so a healthy tunnel is calm rather

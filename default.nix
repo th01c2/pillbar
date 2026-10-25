@@ -10,6 +10,7 @@
 , systemd
 , libnl
 , libpulseaudio
+, curl
 , fontconfig
 , freetype
 }:
@@ -40,6 +41,7 @@ stdenv.mkDerivation {
     systemd
     libnl
     libpulseaudio
+    curl
   ];
 
   cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ];

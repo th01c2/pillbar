@@ -145,6 +145,8 @@ class App {
   std::vector<std::unique_ptr<Bar>> bars_;
   Bar* tooltip_bar_ = nullptr;
   bool tooltip_uses_seconds_ = false;
+  bool vpn_was_up_ = false;
+  bool network_was_online_ = false;
 };
 
 } // namespace pillbar

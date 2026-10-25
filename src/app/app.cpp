@@ -454,11 +454,22 @@ void App::on_pointer_scroll(wl_surface* surface, int steps, double x, double y) 
 }
 
 void App::on_state_change(Item items) {
+  if (has_item(items, Item::Wifi)) {
+    const bool online = state_.wifi.connected || state_.wifi.wired;
+    if (state_.vpn_up != vpn_was_up_ || online != network_was_online_) {
+      vpn_was_up_ = state_.vpn_up;
+      network_was_online_ = online;
+      if (wifi_) wifi_->invalidate_public_ip();
+    }
+  }
   for (auto& bar : bars_) {
     update_target_width(*bar);
     if (!bar->animating) redraw_bar(*bar, items);
   }
   if (tooltip_bar_ != nullptr && tooltip_bar_->tooltip_visible) {
+    if (tooltip_bar_->hover == Item::Wifi && has_item(items, Item::Wifi) && wifi_) {
+      wifi_->request_public_ip();
+    }
     if (has_item(items, Item::Clock) || has_item(items, Item::Cpu) || has_item(items, Item::Gpu) ||
         has_item(items, tooltip_bar_->hover)) {
       update_tooltip(*tooltip_bar_);
@@ -703,7 +714,7 @@ std::vector<std::string> App::tooltip_lines(Item item, Bar& bar) const {
   }
   case Item::Wifi:
     lines = wifi_ ? wifi_->detail() : std::vector<std::string>{"Wi-Fi unavailable"};
-    if (state_.vpn_up) lines.push_back("VPN: connected");
+    lines.push_back(std::string("VPN: ") + (state_.vpn_up ? "connected" : "disconnected"));
     break;
   case Item::Bluetooth:
     lines = bluetooth_ ? bluetooth_->detail() : std::vector<std::string>{"Bluetooth unavailable"};
@@ -766,6 +777,7 @@ std::vector<std::string> App::tooltip_lines(Item item, Bar& bar) const {
 
 void App::show_tooltip(Bar& bar) {
   if (bar.hover == Item::None || !bar.configured) return;
+  if (bar.hover == Item::Wifi && wifi_) wifi_->request_public_ip();
   bar.tooltip_lines = tooltip_lines(bar.hover, bar);
   if (bar.tooltip_lines.empty()) return;
   bar.tooltip_metrics = renderer_.measure_tooltip(bar.tooltip_lines);
