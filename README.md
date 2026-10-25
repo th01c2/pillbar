@@ -20,7 +20,7 @@ runtime, no config file.
   the strip and tiled windows never slide under it. No window rules needed.
 - **Content-sized and softly animated.** Item widths are intrinsic (icon +
   text); the notch is only as wide as it needs to be and eases to its new size
-  in ~160 ms when the window title, workspace count or recorder state changes.
+  in ~320 ms when the item set or workspace count changes.
 - **Event-driven.** Hyprland's event socket, udev, D-Bus signals, PulseAudio
   callbacks and `timerfd`s. Otherwise the process sits in `epoll_wait`.
 - **Compiled-in settings.** Palette, fonts, glyphs, geometry and item order live
@@ -32,10 +32,10 @@ runtime, no config file.
 | --- | --- | --- |
 | Battery | Nerd Font glyph + percent | Green while charging. AC online counts as charging even at a charge limit. 10 %-step icon ladder; udev-driven with an adaptive fallback timer. |
 | Volume | Speaker glyph + percent | PulseAudio subscription; muted shows `muted` in a dim shade. |
-| Network | Wi-Fi strength or ethernet glyph | NetworkManager over D-Bus. Ethernet wins when both are up, else Wi-Fi 1–4, else `off`. Tooltip: SSID, band, link rate, IP, live up/down rates. |
+| Network | Wi-Fi strength or ethernet glyph | NetworkManager over D-Bus. Ethernet wins when both are up, else Wi-Fi 1–4, else `off`. A green or red key badge shows the AmneziaWG state. Tooltip: SSID, band, link rate, local IP, public IPv4, country/city and live up/down rates. |
 | Bluetooth | Glyph | BlueZ D-Bus enumeration. |
 | Workspaces | Numerals | Only workspaces holding windows or focused, so the item grows as you open more. Left click switches, scroll goes prev/next. |
-| Window | App name + title | Title capped at 20 characters, UTF-8 safe; the app name is drawn in a dimmer shade. |
+| Window | App name + title | Optional and disabled by default. Add `"window"` to `Config::order`; title capped at 20 characters and UTF-8 safe. |
 | Recorder | Pulsing red dot | Driven by Hyprland's `screencast` events — no polling. Appears only for real capture sessions (screenshots are filtered out); left click stops known recorders. |
 | Clock | `HH:MM` | Minute-boundary timer; tooltip adds the date, live seconds and CPU/GPU. |
 
@@ -44,7 +44,7 @@ runtime, no config file.
 Hyprland (workspaces, window, dispatchers), NetworkManager (network), PipeWire
 or PulseAudio (volume), BlueZ (Bluetooth), and a Nerd Font for the icons. The
 flake pulls in the rest: `wayland-client`, `cairo`, `pango`, `libsystemd`,
-`libudev`, `libpulse`, `fontconfig`.
+`libudev`, `libpulse`, `libcurl`.
 
 ## Build and run
 
@@ -87,7 +87,7 @@ nix build github:th01c2/pillbar   # produces ./result/bin/pillbar
 Time-savers:
 
 - While developing, point the input at your checkout —
-  `url = "path:/home/sebastian/Sebar"` — and `nixos-rebuild` picks up the working
+  `url = "path:/home/sebastian/pillbar"` — and `nixos-rebuild` picks up the working
   tree without committing.
 - With a `github:` input, run `nix flake update pillbar` after pushing, or the
   lock file keeps you on the previous commit.
@@ -96,16 +96,17 @@ Time-savers:
 
 ### Hyprland
 
-```conf
-# ~/.config/hypr/pillbar.conf   (source it, or paste inline)
-exec-once = pillbar
+Add the bar to the Lua config's startup hook:
 
-# Keep the notch crisp: no compositor blur or glass.
-layerrule = blur off, pillbar
-layerrule = blur off, pillbar-tooltip
-layerrule = ignorealpha 0.0, pillbar-tooltip
-layerrule = ignorezero, pillbar-tooltip
+```lua
+hl.on("hyprland.start", function()
+  hl.exec_cmd("pillbar")
+end)
 ```
+
+No `.conf` include or layer rules are needed. The bar renders its own background
+and shadow, does not request compositor blur, and restricts pointer input to the
+pill.
 
 Logging: `PILLBAR_LOG=error|warn|info|debug` (default `warn`).
 
@@ -123,7 +124,7 @@ nix build .#pillbar && (pkill -x pillbar; setsid -f ./result/bin/pillbar)
 | Palette (text, dim, workspaces, battery, recorder) | `src/app/config.hpp` — the `Color` members |
 | Fonts, sizes, icon font list and glyphs | `src/app/config.hpp` — `fonts`, `icon_fonts`, `*_glyph`, `icon_size_frac` |
 | Behaviour (title cap, recorder pulse, workspaces, tooltips) | `src/app/config.hpp` — `window_title_max_chars`, `recorder_pulse_ms`, `min_workspaces`, `tooltip_*` |
-| Item order and per-item slots | `Config::order` in `src/app/config.hpp`; slots in `src/app/config.cpp` |
+| Item order | `Config::order` in `src/app/config.hpp` |
 
 Colours are written as hex through a small helper, so there is no float maths to
 do by hand:
@@ -157,7 +158,8 @@ Color recorder_color_dim = rgb(0x7a0d08);
 | Workspaces, window | Hyprland `.socket2.sock` | `workspace(v2)`, `openwindow`, `closewindow`, `movewindow`, `createworkspace`, `destroyworkspace`, `focusedmon`, `monitor*` re-query everything; `activewindow(v2)` re-queries only the window, so a title that rewrites itself does not cost four socket queries. |
 | Battery / AC | libudev `power_supply` uevents | Re-reads `/sys/class/power_supply`; one adaptive fallback timer runs only while the battery is not full. |
 | Volume | PulseAudio `pa_context_subscribe` | libpulse sockets are driven by a custom `pa_mainloop_api` registered in the epoll loop. |
-| Network | NetworkManager D-Bus | `PropertiesChanged` on the daemon, device and access point. |
+| Network | NetworkManager D-Bus | `PropertiesChanged` on the daemon, device and access point. Public IPv4/location is fetched over IPv4 only when its tooltip opens and cached for 10 minutes. |
+| VPN | systemd D-Bus | `PropertiesChanged`, `UnitNew` and `UnitRemoved` for `awg-wg0.service`; no polling. |
 | Bluetooth | BlueZ D-Bus | `PropertiesChanged` → `GetManagedObjects` re-enumeration. |
 | Recorder | Hyprland `screencast`/`screencastv2` events | Fully event-driven: the bar sleeps until a screencopy session starts. A short confirmation window filters one-shot screenshots, and one `/proc` sweep at the start of a recording finds the pid so the icon can stop it. The 25 Hz timer only runs while the red dot pulses. |
 | Clock | `timerfd(CLOCK_REALTIME)` | Absolute deadline on the minute, `TFD_TIMER_CANCEL_ON_SET` so clock jumps resync. |
@@ -167,10 +169,8 @@ Color recorder_color_dim = rgb(0x7a0d08);
 ### Idle cost
 
 On a quiet session the bar idles at well under 1 % of one core and around 30 MiB
-RSS. Wakeups come from the minute clock, hover-gated sampling, and real events —
-a window rewriting its title ten times a second wakes the bar ten times a
-second, which is event handling rather than polling. Redraws are limited to the
-items that actually changed.
+RSS. Wakeups come from the minute clock, hover-gated sampling, and real events.
+Window-title queries stop completely unless the optional window item is enabled.
 
 ## Project layout
 
@@ -182,16 +182,7 @@ src/
   sources/   Hyprland, power, pulse, network, bluetooth, recorder, clock, stats, GPU
   wayland/   display, layer surface, shm canvas, pointer
 protocols/   wayland-scanner XML used to generate the client bindings
-hyprland/    example Hyprland snippet
 ```
-
-## Known issues
-
-- **Bluetooth does not render yet.** The BlueZ `GetManagedObjects` parsing never
-  reports an adapter, so the item stays hidden. Everything else is unaffected.
-- **Recorder stop-on-click** works for `wl-screenrec`, `wf-recorder`,
-  `gpu-screen-recorder`, `kooha`, `wl-recorder` and `simplescreenrecorder`
-  (the indicator itself shows up for any capture session, regardless of tool).
 
 ## License
 
