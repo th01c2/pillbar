@@ -1,9 +1,10 @@
 # Build directories (cmake/ninja output, nix build result)
-/build/
-/build-*/
+/build*/
 /result
 /result-*
 compile_commands.json
+CMakeUserPresets.json
+.ninja_*
 
 # Compiled objects, libraries and binaries — never commit these
 *.o
@@ -18,12 +19,20 @@ compile_commands.json
 /pillbar-*
 *.bin
 *.elf
+core
+core.*
+vgcore.*
+perf.data*
 
 # Editor / tooling / OS noise
 .cache/
 .direnv/
 .clangd/
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
 .DS_Store
+*.log
+*.tmp
